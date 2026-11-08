@@ -36,8 +36,6 @@ I developed this utility using **[Google Antigravity](https://deepmind.google/te
 
 <img width="1720" height="1392" alt="image" src="https://github.com/user-attachments/assets/b1e55fb6-e814-49de-8ec7-2b588798ada1" />
 
-<img width="1720" height="1392" alt="image" src="https://github.com/user-attachments/assets/bde61314-25c7-43be-9d4a-7a25e003be83" />
-
 <img width="1720" height="1392" alt="image" src="https://github.com/user-attachments/assets/0d17f082-7bb5-4bd8-be71-5fe18c01192a" />
 
 <img width="1720" height="1392" alt="image" src="https://github.com/user-attachments/assets/ce6cf8d4-f01a-469f-808a-c8f269fb2fd8" />
