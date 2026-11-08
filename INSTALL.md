@@ -35,7 +35,7 @@ If you prefer to run Pilgrim Cleaner without modifying your user profile or from
 
 For standard Windows Setup Wizard installation:
 
-1. Download the compiled installer **`PilgrimCleanerSetup.exe`** from [GitHub Releases](https://github.com).
+1. Download the compiled installer **`PilgrimCleanerSetup.exe`** from [GitHub Releases](https://github.com/Inectha/Pilgrim-Cleaner/releases).
 2. Double-click the `.exe` to launch the setup wizard.
 3. Choose your destination folder.
 4. Select optional tasks (Create Desktop Shortcut, Start Menu Shortcut).

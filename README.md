@@ -122,7 +122,7 @@ Download the release archive, extract it, and run **`Install.bat`**. This deploy
 Download **`PilgrimCleaner-v1.0.0-Windows-x64.zip`**, extract anywhere, and launch `PilgrimCleaner.exe` directly. No registry entries or system folders are modified.
 
 ### 3. Setup Wizard (`PilgrimCleanerSetup.exe`)
-Download and run the standalone setup wizard from [GitHub Releases](https://github.com) for a guided installation.
+Download and run the standalone setup wizard from [GitHub Releases](https://github.com/Inectha/Pilgrim-Cleaner/releases) for a guided installation.
 
 See [**INSTALL.md**](INSTALL.md) for detailed installation and uninstallation instructions.
 
@@ -137,7 +137,7 @@ See [**INSTALL.md**](INSTALL.md) for detailed installation and uninstallation in
 ### Clone & Build
 ```powershell
 # Clone the repository
-git clone https://github.com/<your-username>/Pilgrim-Cleaner.git
+git clone https://github.com/Inectha/Pilgrim-Cleaner.git
 cd Pilgrim-Cleaner
 
 # Build the solution
