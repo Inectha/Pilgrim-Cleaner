@@ -28,13 +28,17 @@ I developed this utility using **[Google Antigravity](https://deepmind.google/te
 
 <!-- To add your own screenshots, place image files in a `docs/screenshots/` folder and link them here, or drag & drop images directly into GitHub issues/releases. -->
 
-| Dashboard & Storage Audit | Storage Modules Review |
-|:---:|:---:|
-| *(Add screenshot: Dashboard with Donut Gauge)* | *(Add screenshot: Module cards & items)* |
+<img width="1720" height="1392" alt="image" src="https://github.com/user-attachments/assets/62d78e0e-31d5-43ec-831e-b1fdd28b909e" />
 
-| Space Lens (Large Files) | Hardware & WHQL Drivers |
-|:---:|:---:|
-| *(Add screenshot: Space Lens Explorer)* | *(Add screenshot: Driver inventory & status)* |
+<img width="1720" height="1392" alt="image" src="https://github.com/user-attachments/assets/3706efc0-5fc0-46c2-a6e5-ced0ec77e652" />
+
+<img width="1720" height="1392" alt="image" src="https://github.com/user-attachments/assets/c2d4d7e2-e281-4d9c-b2a3-e751c59a90b9" />
+
+<img width="1720" height="1392" alt="image" src="https://github.com/user-attachments/assets/b1e55fb6-e814-49de-8ec7-2b588798ada1" />
+
+<img width="1720" height="1392" alt="image" src="https://github.com/user-attachments/assets/bde61314-25c7-43be-9d4a-7a25e003be83" />
+
+<img width="1720" height="1392" alt="image" src="https://github.com/user-attachments/assets/db5f0730-4d36-47c1-9151-0ce62cc5b482" />
 
 ---
 
