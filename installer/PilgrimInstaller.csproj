@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationIcon>..\Assets\app.ico</ApplicationIcon>
+    <AssemblyName>PilgrimCleanerSetup</AssemblyName>
+    <RootNamespace>LuminaInstaller</RootNamespace>
+    <ApplicationTitle>Pilgrim Cleaner Setup</ApplicationTitle>
+    <Product>Pilgrim Cleaner Installer</Product>
+    <Company>Pilgrim Software</Company>
+    <Version>1.0.0</Version>
+    <FileVersion>1.0.0.0</FileVersion>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>false</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\dist\PilgrimCleaner-v1.0.0-Windows-x64.zip">
+      <LogicalName>PilgrimPayload.zip</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>

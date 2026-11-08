@@ -1,0 +1,65 @@
+name: Build & Release Pilgrim Cleaner
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build & Package Windows Installers
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8.0 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore NuGet Packages
+        run: dotnet restore PilgrimCleaner.csproj
+
+      - name: Run Architecture & End-User Audit Test Suite
+        run: |
+          dotnet test Tests/PilgrimCleaner.Tests.csproj --nologo
+          dotnet run --project Tests/PilgrimCleaner.Tests.csproj -- --user-audit
+
+      - name: Publish Pilgrim Cleaner Application
+        run: |
+          dotnet publish PilgrimCleaner.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o dist/PilgrimCleaner
+
+      - name: Prepare Installer Assets & Documentation
+        shell: pwsh
+        run: |
+          Copy-Item "installer/Install.bat" -Destination "dist/PilgrimCleaner/" -Force
+          Copy-Item "installer/Install-PilgrimCleaner.ps1" -Destination "dist/PilgrimCleaner/" -Force
+          Copy-Item "README.md" -Destination "dist/PilgrimCleaner/" -Force
+          Copy-Item "LICENSE" -Destination "dist/PilgrimCleaner/" -Force
+
+      - name: Create Portable ZIP Archive
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "dist/PilgrimCleaner/*" -DestinationPath "dist/PilgrimCleaner-v${{ github.ref_name || '1.0.0' }}-Portable.zip" -CompressionLevel Optimal
+
+      - name: Compile Inno Setup Installer
+        uses: jrsoftware/inno-setup-action@v1
+        with:
+          filepath: installer/PilgrimCleaner.iss
+
+      - name: Create GitHub Release & Upload Assets
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            dist/installer/PilgrimCleaner-Setup-*.exe
+            dist/PilgrimCleaner-*-Portable.zip
+          draft: false
+          prerelease: false
+          generate_release_notes: true

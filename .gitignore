@@ -1,0 +1,40 @@
+## .gitignore for Pilgrim Cleaner (.NET 8 WPF)
+
+# Build results & distribution artifacts
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+dist/
+publish/
+
+# Release archives and compiled executables
+*.zip
+*.7z
+*.tar.gz
+*.exe
+
+# Visual Studio / Rider / Antigravity / VS Code files
+.vs/
+.idea/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Diagnostic and temporary runtime files
+*.log
+crash.log
+log.txt
+
+# OS-generated files
+desktop.ini
+Thumbs.db
+$RECYCLE.BIN/
+.DS_Store
+
+# User-specific / Local developer files
+*.rsuser
+*.suo
+*.userprefs

@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <AssemblyName>PilgrimCleaner</AssemblyName>
+    <RootNamespace>LuminaCleaner</RootNamespace>
+    <ApplicationTitle>Pilgrim Cleaner</ApplicationTitle>
+    <Product>Pilgrim Cleaner</Product>
+    <Company>Pilgrim Software</Company>
+    <Description>Pilgrim Cleaner - Windows Storage Cleaner, App Manager &amp; Hardware Health</Description>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Copyright>Copyright (C) 2026 Pilgrim Software</Copyright>
+    <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
+    <PackageTags>pilgrim-cleaner;windows-11;windows-cleaner;disk-cleaner;storage-optimizer;uninstaller;app-manager;driver-health;whql;duplicate-finder;space-lens;privacy-shield;task-scheduler;bleachbit-alternative;ccleaner-alternative;wpf;dotnet8;csharp;fluent-ui;mica;antigravity;pilgrim-software;open-source;system-utility</PackageTags>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Tests\**" />
+    <EmbeddedResource Remove="Tests\**" />
+    <None Remove="Tests\**" />
+    <Compile Remove="installer\**" />
+    <EmbeddedResource Remove="installer\**" />
+    <None Remove="installer\**" />
+    <Compile Remove="dist\**" />
+    <EmbeddedResource Remove="dist\**" />
+    <None Remove="dist\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="WPF-UI" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\**\*" />
+  </ItemGroup>
+
+</Project>
