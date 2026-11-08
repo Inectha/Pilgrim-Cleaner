@@ -28,7 +28,7 @@ jobs:
 
       - name: Run Architecture & End-User Audit Test Suite
         run: |
-          dotnet test Tests/PilgrimCleaner.Tests.csproj --nologo
+          dotnet run --project Tests/PilgrimCleaner.Tests.csproj
           dotnet run --project Tests/PilgrimCleaner.Tests.csproj -- --user-audit
 
       - name: Publish Pilgrim Cleaner Application
