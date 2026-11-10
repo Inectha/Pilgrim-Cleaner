@@ -69,7 +69,10 @@ public class Program
         await RunTest("Driver Health: Native Windows Update Session Integration", TestWindowsUpdateDriverSession);
         await RunTest("Driver Health: Driver & WHQL Update Correlation", TestDriverUpdateCorrelation);
         await RunTest("Storage Module: Developer & Package Manager Caches", TestDeveloperCacheModule);
+        await RunTest("Storage Module: Server & CBS Archived Logs (IIS / CBS)", TestServerLogsModule);
         await RunTest("Storage Module: Dism WinSxS Component Store", TestDismComponentModule);
+        await RunTest("Sysadmin Engine: Execution Profiles (ServerSafe / RDS)", TestExecutionProfiles);
+        await RunTest("Sysadmin Engine: Multi-Profile User Resolution", TestUserProfileResolver);
         await RunTest("Space Lens: Large & Ancient Files Library Discovery", TestSpaceLensScanner);
         await RunTest("Duplicates: Two-Tier Cryptographic SHA-256 Audit", TestDuplicatesFinder);
         await RunTest("Startup Accelerator: Non-Destructive StartupApproved", TestStartupAccelerator);
@@ -445,6 +448,51 @@ public class Program
         Assert(result != null, "Developer cache scan result cannot be null.");
     }
 
+    private static async Task TestServerLogsModule()
+    {
+        var module = new ServerLogsCleanerModule();
+        Assert(module.Id == "server_logs", "Expected Id 'server_logs'.");
+        Assert(module.Category == CleanerCategory.ServerLogs, "Expected ServerLogs category.");
+        Assert(module.RequiresElevation, "Server logs module must require elevation.");
+
+        var options = new EngineOptions { DryRun = true };
+        var progress = new Progress<ScanProgressReport>();
+        var result = await module.ScanAsync(options, progress, CancellationToken.None);
+        Assert(result != null, "Server logs scan result cannot be null.");
+    }
+
+    private static Task TestExecutionProfiles()
+    {
+        var engine = new EngineService();
+        Assert(engine.Modules.Count == 8, $"Expected 8 modules registered in EngineService, got {engine.Modules.Count}.");
+
+        // Test ServerSafe profile
+        var serverOpts = new EngineOptions { Profile = CleanupProfile.ServerSafe };
+        engine.ApplyProfile(serverOpts);
+        Assert(engine.Modules.First(m => m.Id == "system_temp").IsEnabled, "ServerSafe should enable system_temp.");
+        Assert(engine.Modules.First(m => m.Id == "server_logs").IsEnabled, "ServerSafe should enable server_logs.");
+        Assert(!engine.Modules.First(m => m.Id == "browser_cache").IsEnabled, "ServerSafe must disable browser_cache.");
+        Assert(!engine.Modules.First(m => m.Id == "developer_caches").IsEnabled, "ServerSafe must disable developer_caches.");
+
+        // Test RDS profile
+        var rdsOpts = new EngineOptions { Profile = CleanupProfile.Rds };
+        engine.ApplyProfile(rdsOpts);
+        Assert(rdsOpts.AllProfiles, "RDS profile must automatically enable AllProfiles.");
+        Assert(engine.Modules.First(m => m.Id == "browser_cache").IsEnabled, "RDS profile should enable browser_cache.");
+        Assert(engine.Modules.First(m => m.Id == "server_logs").IsEnabled, "RDS profile should enable server_logs.");
+
+        return Task.CompletedTask;
+    }
+
+    private static Task TestUserProfileResolver()
+    {
+        var profiles = UserProfileResolver.GetTargetUserProfiles(includeAllProfiles: false);
+        Assert(profiles.Count >= 1, "UserProfileResolver must return at least the current user profile.");
+        Assert(!profiles.Any(p => p.EndsWith("\\Public", StringComparison.OrdinalIgnoreCase)), "Public profile must be excluded.");
+        Assert(!profiles.Any(p => p.EndsWith("\\Default", StringComparison.OrdinalIgnoreCase)), "Default profile must be excluded.");
+        return Task.CompletedTask;
+    }
+
     private static async Task TestDismComponentModule()
     {
         var module = new DismComponentCleanerModule();
@@ -530,7 +578,7 @@ public class Program
         var items = await service.GetStartupItemsAsync(CancellationToken.None);
 
         Assert(items != null, "Startup items collection cannot be null.");
-        Console.Write($"({items.Count} entries) ");
+        Console.Write($"({items!.Count} entries) ");
     }
 
     private static async Task TestTelemetryService()
@@ -755,7 +803,7 @@ public class Program
         await AuditFeature("Storage Modules: Granular Category Review & Selection", () =>
         {
             var vm = new MainViewModel();
-            Assert(vm.Modules.Count == 7, $"Expected 7 core modules, got {vm.Modules.Count}");
+            Assert(vm.Modules.Count == 8, $"Expected 8 core modules, got {vm.Modules.Count}");
             foreach (var mod in vm.Modules)
             {
                 Assert(!string.IsNullOrWhiteSpace(mod.Name), "Module name must not be empty");
@@ -766,7 +814,7 @@ public class Program
             Assert(vm.Modules.All(m => !m.IsEnabled), "All modules should be disabled.");
             vm.SelectAllModulesCommand.Execute(true);
             Assert(vm.Modules.All(m => m.IsEnabled), "All modules should be enabled.");
-            Console.Write($"(7 modules verified) ");
+            Console.Write($"(8 modules verified) ");
             return Task.CompletedTask;
         });
 

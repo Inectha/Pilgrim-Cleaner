@@ -158,9 +158,10 @@ public class AppManagerService : IAppManagerService
             var psi = new ProcessStartInfo
             {
                 FileName = "powershell.exe",
-                Arguments = "-NoProfile -NonInteractive -Command \"Get-AppxPackage | Where-Object { -not $_.IsFramework -and -not $_.NonRemovable } | Select-Object Name, Publisher, Version, InstallLocation, PackageFullName | ConvertTo-Json -Compress\"",
+                Arguments = "-NoProfile -NonInteractive -Command \"Get-AppxPackage -ErrorAction SilentlyContinue | Where-Object { -not $_.IsFramework -and -not $_.NonRemovable } | Select-Object Name, Publisher, Version, InstallLocation, PackageFullName | ConvertTo-Json -Compress\"",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
+                RedirectStandardError = true,
                 CreateNoWindow = true
             };
 

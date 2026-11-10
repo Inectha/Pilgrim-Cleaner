@@ -22,6 +22,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LuminaCleaner.Models;
+using LuminaCleaner.Services;
 using Wpf.Ui.Controls;
 
 namespace LuminaCleaner.Modules;
@@ -35,14 +36,22 @@ public class DeveloperCacheCleanerModule : CleanerModuleBase
     public override CleanerCategory Category => CleanerCategory.DeveloperCaches;
     public override SymbolRegular IconSymbol => SymbolRegular.Code24;
 
-    private static readonly string[] DeveloperCachePaths =
-    [
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget", "packages"),
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "npm-cache"),
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "pnpm", "store"),
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "pip", "cache"),
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".cargo", "registry", "cache")
-    ];
+    private static List<string> ResolveDeveloperCachePaths(bool includeAllProfiles)
+    {
+        var dirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var profile in UserProfileResolver.GetTargetUserProfiles(includeAllProfiles))
+        {
+            string localAppData = Path.Combine(profile, "AppData", "Local");
+            dirs.Add(Path.Combine(profile, ".nuget", "packages"));
+            dirs.Add(Path.Combine(localAppData, "npm-cache"));
+            dirs.Add(Path.Combine(localAppData, "pnpm", "store"));
+            dirs.Add(Path.Combine(localAppData, "pip", "cache"));
+            dirs.Add(Path.Combine(profile, ".cargo", "registry", "cache"));
+        }
+
+        return dirs.Where(Directory.Exists).ToList();
+    }
 
     public override async Task<ModuleScanResult> ScanAsync(EngineOptions options, IProgress<ScanProgressReport> progress, CancellationToken ct)
     {
@@ -60,20 +69,31 @@ public class DeveloperCacheCleanerModule : CleanerModuleBase
         {
             await Task.Run(() =>
             {
-                foreach (string rootPath in DeveloperCachePaths)
+                foreach (string rootPath in ResolveDeveloperCachePaths(options.AllProfiles))
                 {
                     ct.ThrowIfCancellationRequested();
-                    if (!Directory.Exists(rootPath)) continue;
 
                     foreach (var fi in SafeEnumerateFiles(rootPath))
                     {
                         ct.ThrowIfCancellationRequested();
 
+                        long length = 0;
+                        DateTime lastWriteUtc = DateTime.MinValue;
+                        try
+                        {
+                            length = fi.Length;
+                            lastWriteUtc = fi.LastWriteTimeUtc;
+                        }
+                        catch
+                        {
+                            continue;
+                        }
+
                         // Check age buffer (default 24h)
-                        if (now - fi.LastWriteTimeUtc < options.AgeSafetyBuffer)
+                        if (now - lastWriteUtc < options.AgeSafetyBuffer)
                         {
                             skipped++;
-                            skippedBytes += fi.Length;
+                            skippedBytes += length;
                             continue;
                         }
 
@@ -81,7 +101,7 @@ public class DeveloperCacheCleanerModule : CleanerModuleBase
                         {
                             FullPath = fi.FullName,
                             FileName = fi.Name,
-                            SizeBytes = fi.Length,
+                            SizeBytes = length,
                             LastModified = fi.LastWriteTime,
                             Category = Category,
                             ModuleName = Name,
@@ -89,8 +109,7 @@ public class DeveloperCacheCleanerModule : CleanerModuleBase
                         };
 
                         discovered.Add(item);
-                        totalBytes += fi.Length;
-                        AddDiscoveredItem(item);
+                        totalBytes += length;
 
                         progress?.Report(new ScanProgressReport(
                             fi.FullName,
@@ -108,9 +127,16 @@ public class DeveloperCacheCleanerModule : CleanerModuleBase
             sw.Stop();
         }
 
+        foreach (var item in discovered)
+        {
+            AddDiscoveredItem(item);
+        }
+
         SkippedSizeBytes = skippedBytes;
         SkippedCount = skipped;
-        SkippedReasonSummary = "Protected recent cache files (<24h old)";
+        SkippedReasonSummary = skipped > 0
+            ? $"Protected {skipped:N0} recent cache files (<24h old)"
+            : "All inspected developer cache files are older than 24h.";
 
         return new ModuleScanResult(Id, discovered, totalBytes, skippedBytes, skipped, sw.Elapsed);
     }

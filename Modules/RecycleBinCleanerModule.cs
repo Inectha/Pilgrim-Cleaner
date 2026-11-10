@@ -1,4 +1,4 @@
-﻿// Lumina Cleaner - Enterprise Windows Disk Cleaner & Optimizer
+// Lumina Cleaner - Enterprise Windows Disk Cleaner & Optimizer
 // Copyright (C) 2026 Pilgrim Software
 //
 // This program is free software: you can redistribute it and/or modify
@@ -17,6 +17,8 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LuminaCleaner.Interop;
@@ -30,7 +32,7 @@ public class RecycleBinCleanerModule : CleanerModuleBase
     public override string Id => "recycle_bin";
     public override string Name => "Windows Recycle Bin";
     public override string Description => "Deleted files and folders held in the Windows Shell Recycle Bin across all drives.";
-    public override string SecurityNotice => "Native Shell API: Processed strictly via native Windows Shell32 (SHEmptyRecycleBinW) without external shell injection.";
+    public override string SecurityNotice => "Native Shell API: Processed strictly via native Windows Shell32 (SHEmptyRecycleBinW) and multi-SID Recycle Bin audit when elevated.";
     public override CleanerCategory Category => CleanerCategory.RecycleBin;
     public override SymbolRegular IconSymbol => SymbolRegular.Delete24;
 
@@ -49,33 +51,67 @@ public class RecycleBinCleanerModule : CleanerModuleBase
 
         await Task.Run(() =>
         {
-            if (NativeMethods.QueryRecycleBinTotal(out long bytes, out long items))
+            bool useMultiSidScan = options.AllProfiles && NativeMethods.IsRunningAsAdministrator();
+
+            if (!useMultiSidScan && NativeMethods.QueryRecycleBinTotal(out long bytes, out long items) && items > 0)
             {
                 totalBytes = bytes;
 
-                if (items > 0)
+                var item = new CleanItemModel
                 {
-                    var item = new CleanItemModel
+                    FullPath = @"RecycleBin:\* (All Fixed Drives)",
+                    FileName = $"Recycle Bin Payload ({items:N0} items)",
+                    SizeBytes = bytes,
+                    LastModified = DateTime.Now,
+                    Category = Category,
+                    ModuleName = Name,
+                    IsFolder = true,
+                    IsSelected = true,
+                    Status = CleanItemStatus.Scanned
+                };
+
+                discovered.Add(item);
+
+                progress.Report(new ScanProgressReport(
+                    item.FullPath,
+                    1,
+                    bytes,
+                    Name,
+                    100.0));
+            }
+            else if (useMultiSidScan)
+            {
+                // Multi-user / SYSTEM context: enumerate $Recycle.Bin across all fixed drives
+                foreach (var drive in DriveInfo.GetDrives())
+                {
+                    if (drive.DriveType != DriveType.Fixed || !drive.IsReady) continue;
+
+                    string recycleRoot = Path.Combine(drive.RootDirectory.FullName, "$Recycle.Bin");
+                    if (!Directory.Exists(recycleRoot)) continue;
+
+                    foreach (var file in SafeEnumerateFiles(recycleRoot, "*", 5))
                     {
-                        FullPath = @"RecycleBin:\* (All Fixed Drives)",
-                        FileName = $"Recycle Bin Payload ({items:N0} items)",
-                        SizeBytes = bytes,
-                        LastModified = DateTime.Now,
-                        Category = Category,
-                        ModuleName = Name,
-                        IsFolder = true,
-                        IsSelected = true,
-                        Status = CleanItemStatus.Scanned
-                    };
+                        if (ct.IsCancellationRequested) break;
+                        if (file.Name.Equals("desktop.ini", StringComparison.OrdinalIgnoreCase)) continue;
 
-                    discovered.Add(item);
+                        long len = 0;
+                        try { len = file.Length; } catch { continue; }
 
-                    progress.Report(new ScanProgressReport(
-                        item.FullPath,
-                        1,
-                        bytes,
-                        Name,
-                        100.0));
+                        var item = new CleanItemModel
+                        {
+                            FullPath = file.FullName,
+                            FileName = file.Name,
+                            SizeBytes = len,
+                            LastModified = file.LastWriteTime,
+                            Category = Category,
+                            ModuleName = Name,
+                            IsFolder = false,
+                            IsSelected = true,
+                            Status = CleanItemStatus.Scanned
+                        };
+                        discovered.Add(item);
+                        totalBytes += len;
+                    }
                 }
             }
         }, ct);
@@ -105,7 +141,7 @@ public class RecycleBinCleanerModule : CleanerModuleBase
 
         await Task.Run(() =>
         {
-            if (itemsToClean.Count > 0)
+            if (itemsToClean.Count == 1 && itemsToClean[0].FullPath.StartsWith("RecycleBin:", StringComparison.OrdinalIgnoreCase))
             {
                 var item = itemsToClean[0];
                 progress.Report(new CleanProgressReport(
@@ -144,6 +180,33 @@ public class RecycleBinCleanerModule : CleanerModuleBase
                     1,
                     100.0,
                     Name));
+            }
+            else if (itemsToClean.Count > 0)
+            {
+                // Multi-SID direct file cleanup + Shell32 call
+                if (!options.DryRun)
+                {
+                    NativeMethods.EmptyRecycleBinSafely();
+                }
+
+                for (int i = 0; i < itemsToClean.Count; i++)
+                {
+                    if (ct.IsCancellationRequested) break;
+                    var item = itemsToClean[i];
+                    var (success, reason) = SafeDeleteFile(item.FullPath, options.DryRun);
+                    if (success)
+                    {
+                        item.Status = CleanItemStatus.Cleaned;
+                        cleanedBytes += item.SizeBytes;
+                        cleanedCount++;
+                    }
+                    else
+                    {
+                        item.Status = CleanItemStatus.SkippedLocked;
+                        item.SkipReason = reason;
+                        skippedCount++;
+                    }
+                }
             }
         }, ct);
 

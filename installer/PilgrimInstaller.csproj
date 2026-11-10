@@ -12,8 +12,8 @@
     <ApplicationTitle>Pilgrim Cleaner Setup</ApplicationTitle>
     <Product>Pilgrim Cleaner Installer</Product>
     <Company>Pilgrim Software</Company>
-    <Version>1.0.0</Version>
-    <FileVersion>1.0.0.0</FileVersion>
+    <Version>1.1.0</Version>
+    <FileVersion>1.1.0.0</FileVersion>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>false</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
@@ -21,7 +21,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="..\dist\PilgrimCleaner-v1.0.0-Windows-x64.zip">
+    <EmbeddedResource Include="..\dist\PilgrimCleaner-v1.1.0-Windows-x64.zip">
       <LogicalName>PilgrimPayload.zip</LogicalName>
     </EmbeddedResource>
   </ItemGroup>

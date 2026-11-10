@@ -51,14 +51,31 @@ public class DismComponentCleanerModule : CleanerModuleBase
             await Task.Run(() =>
             {
                 string winSxSPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "WinSxS");
+                long measuredBytes = 0;
+
                 if (Directory.Exists(winSxSPath))
                 {
-                    _estimatedReclaimableBytes = 2L * 1024 * 1024 * 1024; // Average 2.0 GB superseded updates
+                    // Measure actual staging, temp, pending delete, and manifest cache folders in WinSxS
+                    // rather than reporting an arbitrary hardcoded number.
+                    string[] measurableSubfolders = ["Temp", "Backup", "ManifestCache"];
+                    foreach (var sub in measurableSubfolders)
+                    {
+                        string subPath = Path.Combine(winSxSPath, sub);
+                        if (!Directory.Exists(subPath)) continue;
+
+                        foreach (var fi in SafeEnumerateFiles(subPath, "*", 3))
+                        {
+                            if (ct.IsCancellationRequested) break;
+                            try { measuredBytes += fi.Length; } catch { }
+                        }
+                    }
                 }
+
+                _estimatedReclaimableBytes = measuredBytes;
 
                 var item = new CleanItemModel
                 {
-                    FullPath = "C:\\Windows\\WinSxS [Superseded Update Components]",
+                    FullPath = @"C:\Windows\WinSxS [Superseded Update Components & Staging]",
                     FileName = "DISM /Online /Cleanup-Image /StartComponentCleanup",
                     SizeBytes = _estimatedReclaimableBytes,
                     LastModified = DateTime.Now,
@@ -68,7 +85,6 @@ public class DismComponentCleanerModule : CleanerModuleBase
                 };
 
                 discovered.Add(item);
-                AddDiscoveredItem(item);
 
                 progress?.Report(new ScanProgressReport(
                     item.FullPath,
@@ -85,6 +101,11 @@ public class DismComponentCleanerModule : CleanerModuleBase
             sw.Stop();
         }
 
+        foreach (var item in discovered)
+        {
+            AddDiscoveredItem(item);
+        }
+
         return new ModuleScanResult(Id, discovered, _estimatedReclaimableBytes, 0, 0, sw.Elapsed);
     }
 
@@ -93,10 +114,18 @@ public class DismComponentCleanerModule : CleanerModuleBase
         var sw = Stopwatch.StartNew();
         long cleanedBytes = 0;
         int cleanedCount = 0;
+        int skippedCount = 0;
+        int failedCount = 0;
 
         if (options.DryRun)
         {
             return new ModuleCleanResult(Id, _estimatedReclaimableBytes, 1, 0, 0, sw.Elapsed);
+        }
+
+        if (!NativeMethods.IsRunningAsAdministrator() && options.HeadlessMode)
+        {
+            sw.Stop();
+            return new ModuleCleanResult(Id, 0, 0, 1, 0, sw.Elapsed);
         }
 
         try
@@ -107,7 +136,7 @@ public class DismComponentCleanerModule : CleanerModuleBase
                     "Executing Microsoft DISM Component Store cleanup...",
                     0,
                     0,
-                    1,
+                    0,
                     1,
                     50.0,
                     Name));
@@ -115,23 +144,42 @@ public class DismComponentCleanerModule : CleanerModuleBase
                 var psi = new ProcessStartInfo
                 {
                     FileName = "dism.exe",
-                    Arguments = "/Online /Cleanup-Image /StartComponentCleanup",
+                    Arguments = "/Online /Cleanup-Image /StartComponentCleanup /Quiet /NoRestart",
                     UseShellExecute = false,
                     CreateNoWindow = true,
-                    RedirectStandardOutput = true
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
                 };
 
                 if (!NativeMethods.IsRunningAsAdministrator())
                 {
                     psi.FileName = "powershell.exe";
-                    psi.Arguments = "-NoProfile -Command \"Start-Process dism.exe -ArgumentList '/Online /Cleanup-Image /StartComponentCleanup' -Verb RunAs -Wait\"";
+                    psi.Arguments = "-NoProfile -Command \"Start-Process dism.exe -ArgumentList '/Online /Cleanup-Image /StartComponentCleanup /Quiet /NoRestart' -Verb RunAs -Wait\"";
                 }
 
                 using var proc = Process.Start(psi);
-                proc?.WaitForExit(30000);
+                if (proc != null)
+                {
+                    // Allow up to 10 minutes for DISM on Windows Server, checking cancellation token
+                    while (!proc.WaitForExit(1000))
+                    {
+                        if (ct.IsCancellationRequested)
+                        {
+                            try { proc.Kill(); } catch { }
+                            break;
+                        }
+                    }
 
-                cleanedCount = 1;
-                cleanedBytes = _estimatedReclaimableBytes;
+                    if (!ct.IsCancellationRequested && proc.ExitCode == 0)
+                    {
+                        cleanedCount = 1;
+                        cleanedBytes = _estimatedReclaimableBytes;
+                    }
+                    else
+                    {
+                        failedCount = 1;
+                    }
+                }
 
                 progress?.Report(new CleanProgressReport(
                     "DISM Component Store cleanup complete.",
@@ -145,6 +193,7 @@ public class DismComponentCleanerModule : CleanerModuleBase
         }
         catch (Exception ex)
         {
+            failedCount = 1;
             progress?.Report(new CleanProgressReport(
                 $"DISM execution notice: {ex.Message}",
                 0,
@@ -159,6 +208,6 @@ public class DismComponentCleanerModule : CleanerModuleBase
             sw.Stop();
         }
 
-        return new ModuleCleanResult(Id, cleanedBytes, cleanedCount, 0, 0, sw.Elapsed);
+        return new ModuleCleanResult(Id, cleanedBytes, cleanedCount, skippedCount, failedCount, sw.Elapsed);
     }
 }

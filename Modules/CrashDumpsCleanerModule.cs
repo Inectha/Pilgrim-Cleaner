@@ -1,4 +1,4 @@
-﻿// Lumina Cleaner - Enterprise Windows Disk Cleaner & Optimizer
+// Lumina Cleaner - Enterprise Windows Disk Cleaner & Optimizer
 // Copyright (C) 2026 Pilgrim Software
 //
 // This program is free software: you can redistribute it and/or modify
@@ -22,6 +22,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LuminaCleaner.Models;
+using LuminaCleaner.Services;
 using Wpf.Ui.Controls;
 
 namespace LuminaCleaner.Modules;
@@ -31,36 +32,40 @@ public class CrashDumpsCleanerModule : CleanerModuleBase
     public override string Id => "crash_dumps";
     public override string Name => "Crash Dumps & Error Reports";
     public override string Description => "Orphaned application memory dump files (.dmp) and Windows Error Reporting (WER) telemetry archives.";
-    public override string SecurityNotice => "Zero System Impact: Memory dumps and error telemetry from past crashes can be safely removed without affecting any system stability.";
+    public override string SecurityNotice => "Zero System Impact: Memory dumps and error telemetry older than the 24h guardrail are safely removed while preserving recent incident dumps.";
     public override CleanerCategory Category => CleanerCategory.CrashDumps;
     public override SymbolRegular IconSymbol => SymbolRegular.Bug24;
 
-    private readonly List<string> _targetDirectories = [];
-
-    public CrashDumpsCleanerModule()
+    private List<string> ResolveTargetDirectories(bool includeAllProfiles)
     {
-        string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var dirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        void AddIfValid(string path)
+        {
+            if (!string.IsNullOrWhiteSpace(path) && Directory.Exists(path))
+            {
+                dirs.Add(Path.TrimEndingDirectorySeparator(path));
+            }
+        }
+
+        foreach (var profile in UserProfileResolver.GetTargetUserProfiles(includeAllProfiles))
+        {
+            string localAppData = Path.Combine(profile, "AppData", "Local");
+            AddIfValid(Path.Combine(localAppData, "CrashDumps"));
+            AddIfValid(Path.Combine(localAppData, @"Microsoft\Windows\WER\ReportArchive"));
+            AddIfValid(Path.Combine(localAppData, @"Microsoft\Windows\WER\ReportQueue"));
+            AddIfValid(Path.Combine(localAppData, @"Microsoft\Windows\WER\Temp"));
+        }
+
         string programData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
-
-        AddIfValid(Path.Combine(localAppData, "CrashDumps"));
-        AddIfValid(Path.Combine(localAppData, @"Microsoft\Windows\WER\ReportArchive"));
-        AddIfValid(Path.Combine(localAppData, @"Microsoft\Windows\WER\ReportQueue"));
-        AddIfValid(Path.Combine(localAppData, @"Microsoft\Windows\WER\Temp"));
-
         AddIfValid(Path.Combine(programData, @"Microsoft\Windows\WER\ReportArchive"));
         AddIfValid(Path.Combine(programData, @"Microsoft\Windows\WER\ReportQueue"));
         AddIfValid(Path.Combine(programData, @"Microsoft\Windows\WER\Temp"));
 
         string minidump = Environment.ExpandEnvironmentVariables(@"%SystemRoot%\Minidump");
         AddIfValid(minidump);
-    }
 
-    private void AddIfValid(string path)
-    {
-        if (!string.IsNullOrWhiteSpace(path) && Directory.Exists(path))
-        {
-            _targetDirectories.Add(path);
-        }
+        return dirs.ToList();
     }
 
     public override async Task<ModuleScanResult> ScanAsync(
@@ -74,11 +79,15 @@ public class CrashDumpsCleanerModule : CleanerModuleBase
 
         var discovered = new List<CleanItemModel>();
         int skippedCount = 0;
+        long skippedBytes = 0;
         long totalBytes = 0;
+        var targetDirs = ResolveTargetDirectories(options.AllProfiles);
 
         await Task.Run(() =>
         {
-            foreach (var dir in _targetDirectories)
+            DateTime now = DateTime.UtcNow;
+
+            foreach (var dir in targetDirs)
             {
                 if (ct.IsCancellationRequested) break;
 
@@ -87,12 +96,22 @@ public class CrashDumpsCleanerModule : CleanerModuleBase
                     if (ct.IsCancellationRequested) break;
 
                     long length = 0;
+                    DateTime lastWriteUtc = DateTime.MinValue;
                     try
                     {
                         length = file.Length;
+                        lastWriteUtc = file.LastWriteTimeUtc;
                     }
                     catch
                     {
+                        continue;
+                    }
+
+                    TimeSpan age = now - lastWriteUtc;
+                    if (age < options.AgeSafetyBuffer)
+                    {
+                        skippedCount++;
+                        skippedBytes += length;
                         continue;
                     }
 
@@ -126,9 +145,15 @@ public class CrashDumpsCleanerModule : CleanerModuleBase
             AddDiscoveredItem(item);
         }
 
+        SkippedSizeBytes = skippedBytes;
+        SkippedCount = skippedCount;
+        SkippedReasonSummary = skippedCount > 0
+            ? $"{skippedCount:N0} recent crash reports ({CleanItemModel.FormatBytes(skippedBytes)}) preserved by 24h buffer."
+            : "All inspected crash reports are older than 24h.";
+
         sw.Stop();
         IsScanning = false;
-        return new ModuleScanResult(Id, discovered, totalBytes, 0, skippedCount, sw.Elapsed);
+        return new ModuleScanResult(Id, discovered, totalBytes, skippedBytes, skippedCount, sw.Elapsed);
     }
 
     public override async Task<ModuleCleanResult> CleanAsync(
@@ -179,10 +204,13 @@ public class CrashDumpsCleanerModule : CleanerModuleBase
                     Name));
             }
 
-            foreach (var dir in _targetDirectories)
+            if (!options.DryRun)
             {
-                if (ct.IsCancellationRequested) break;
-                SafeDeleteEmptyDirectories(dir);
+                foreach (var dir in ResolveTargetDirectories(options.AllProfiles))
+                {
+                    if (ct.IsCancellationRequested) break;
+                    SafeDeleteEmptyDirectories(dir);
+                }
             }
         }, ct);
 

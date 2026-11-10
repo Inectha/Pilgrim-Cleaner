@@ -43,8 +43,37 @@ public class EngineService : IEngineService
             new RecycleBinCleanerModule(),
             new DeliveryOptimizationCleanerModule(),
             new DeveloperCacheCleanerModule(),
+            new ServerLogsCleanerModule(),
             new DismComponentCleanerModule()
         ];
+    }
+
+    public void ApplyProfile(EngineOptions options)
+    {
+        switch (options.Profile)
+        {
+            case CleanupProfile.ServerSafe:
+                SetEnabledModules(["system_temp", "crash_dumps", "delivery_optimization", "server_logs"]);
+                break;
+
+            case CleanupProfile.Rds:
+                options.AllProfiles = true;
+                SetEnabledModules(["system_temp", "crash_dumps", "browser_cache", "recycle_bin", "delivery_optimization", "server_logs"]);
+                break;
+
+            case CleanupProfile.Workstation:
+                SetEnabledModules(["system_temp", "crash_dumps", "browser_cache", "recycle_bin", "delivery_optimization", "developer_caches"]);
+                break;
+        }
+    }
+
+    public void SetEnabledModules(IEnumerable<string> moduleIds)
+    {
+        var set = new HashSet<string>(moduleIds, StringComparer.OrdinalIgnoreCase);
+        foreach (var m in _modules)
+        {
+            m.IsEnabled = set.Contains(m.Id);
+        }
     }
 
     public void Log(LogLevel level, string tag, string message, string? details = null)

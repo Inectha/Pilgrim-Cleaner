@@ -1,4 +1,4 @@
-﻿// Lumina Cleaner - Enterprise Windows Disk Cleaner & Optimizer
+// Lumina Cleaner - Enterprise Windows Disk Cleaner & Optimizer
 // Copyright (C) 2026 Pilgrim Software
 //
 // This program is free software: you can redistribute it and/or modify
@@ -22,6 +22,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LuminaCleaner.Models;
+using LuminaCleaner.Services;
 using Wpf.Ui.Controls;
 
 namespace LuminaCleaner.Modules;
@@ -35,21 +36,32 @@ public class TempCleanerModule : CleanerModuleBase
     public override CleanerCategory Category => CleanerCategory.SystemTemp;
     public override SymbolRegular IconSymbol => SymbolRegular.FolderZip24;
 
-    private readonly List<string> _targetDirectories = [];
-
-    public TempCleanerModule()
+    private List<string> ResolveTargetDirectories(bool includeAllProfiles)
     {
+        var dirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         string userTemp = Path.GetTempPath();
         if (!string.IsNullOrWhiteSpace(userTemp) && Directory.Exists(userTemp))
         {
-            _targetDirectories.Add(userTemp);
+            dirs.Add(Path.TrimEndingDirectorySeparator(userTemp));
+        }
+
+        foreach (var profile in UserProfileResolver.GetTargetUserProfiles(includeAllProfiles))
+        {
+            string profileTemp = Path.Combine(profile, "AppData", "Local", "Temp");
+            if (Directory.Exists(profileTemp))
+            {
+                dirs.Add(Path.TrimEndingDirectorySeparator(profileTemp));
+            }
         }
 
         string systemTemp = Environment.ExpandEnvironmentVariables(@"%SystemRoot%\Temp");
         if (Directory.Exists(systemTemp))
         {
-            _targetDirectories.Add(systemTemp);
+            dirs.Add(Path.TrimEndingDirectorySeparator(systemTemp));
         }
+
+        return dirs.ToList();
     }
 
     public override async Task<ModuleScanResult> ScanAsync(
@@ -65,12 +77,13 @@ public class TempCleanerModule : CleanerModuleBase
         int skippedCount = 0;
         long skippedBytes = 0;
         long totalBytes = 0;
+        var targetDirs = ResolveTargetDirectories(options.AllProfiles);
 
         await Task.Run(() =>
         {
             DateTime now = DateTime.UtcNow;
 
-            foreach (var targetDir in _targetDirectories)
+            foreach (var targetDir in targetDirs)
             {
                 if (ct.IsCancellationRequested) break;
 
@@ -201,10 +214,13 @@ public class TempCleanerModule : CleanerModuleBase
                     Name));
             }
 
-            foreach (var dir in _targetDirectories)
+            if (!options.DryRun)
             {
-                if (ct.IsCancellationRequested) break;
-                SafeDeleteEmptyDirectories(dir);
+                foreach (var dir in ResolveTargetDirectories(options.AllProfiles))
+                {
+                    if (ct.IsCancellationRequested) break;
+                    SafeDeleteEmptyDirectories(dir);
+                }
             }
         }, ct);
 

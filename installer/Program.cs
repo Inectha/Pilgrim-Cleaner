@@ -2,7 +2,9 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Reflection;
+using System.Security.Principal;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -13,11 +15,192 @@ namespace LuminaInstaller;
 
 public class Program : Application
 {
+    public const string SetupVersion = "1.1.0";
+
     [STAThread]
-    public static void Main()
+    public static int Main(string[] args)
     {
+        bool silent = args.Any(a =>
+            a.Equals("--silent", StringComparison.OrdinalIgnoreCase) ||
+            a.Equals("/S", StringComparison.OrdinalIgnoreCase) ||
+            a.Equals("/quiet", StringComparison.OrdinalIgnoreCase) ||
+            a.Equals("/verysilent", StringComparison.OrdinalIgnoreCase));
+
+        bool isAdmin = IsRunningAsAdministrator();
+        string defaultTarget = isAdmin
+            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Pilgrim Cleaner")
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "Pilgrim Cleaner");
+
+        if (silent)
+        {
+            try
+            {
+                InstallerEngine.InstallPackage(defaultTarget, createStartShortcut: true, createDesktopShortcut: false, addToPath: true, isAdmin: isAdmin);
+                return 0;
+            }
+            catch
+            {
+                return 1;
+            }
+        }
+
         var app = new Program();
-        app.Run(new InstallerWindow());
+        return app.Run(new InstallerWindow(defaultTarget, isAdmin));
+    }
+
+    public static bool IsRunningAsAdministrator()
+    {
+        try
+        {
+            using var identity = WindowsIdentity.GetCurrent();
+            var principal = new WindowsPrincipal(identity);
+            return principal.IsInRole(WindowsBuiltInRole.Administrator);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+}
+
+public static class InstallerEngine
+{
+    public static void InstallPackage(
+        string targetDir,
+        bool createStartShortcut,
+        bool createDesktopShortcut,
+        bool addToPath,
+        bool isAdmin,
+        Action<string, double>? onProgress = null)
+    {
+        onProgress?.Invoke("Stopping running Pilgrim Cleaner instances...", 10);
+        foreach (var procName in new[] { "PilgrimCleaner", "pilgrim", "LuminaCleaner" })
+        {
+            foreach (var p in Process.GetProcessesByName(procName))
+            {
+                try { p.Kill(); p.WaitForExit(1000); } catch { }
+            }
+        }
+
+        onProgress?.Invoke("Extracting application & Sysadmin CLI binaries...", 35);
+        if (!Directory.Exists(targetDir))
+        {
+            Directory.CreateDirectory(targetDir);
+        }
+
+        var asm = Assembly.GetExecutingAssembly();
+        using var stream = asm.GetManifestResourceStream("PilgrimPayload.zip")
+            ?? throw new InvalidOperationException("Embedded installer payload not found.");
+
+        using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
+        foreach (var entry in archive.Entries)
+        {
+            string destPath = Path.Combine(targetDir, entry.FullName);
+            if (string.IsNullOrEmpty(entry.Name))
+            {
+                Directory.CreateDirectory(destPath);
+            }
+            else
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
+                entry.ExtractToFile(destPath, true);
+            }
+        }
+
+        if (addToPath)
+        {
+            onProgress?.Invoke("Registering 'pilgrim' CLI in Windows PATH...", 60);
+            try
+            {
+                var scope = isAdmin ? EnvironmentVariableTarget.Machine : EnvironmentVariableTarget.User;
+                string currentPath = Environment.GetEnvironmentVariable("Path", scope) ?? string.Empty;
+                var parts = currentPath.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+                if (!parts.Any(p => p.Equals(targetDir, StringComparison.OrdinalIgnoreCase)))
+                {
+                    parts.Add(targetDir);
+                    Environment.SetEnvironmentVariable("Path", string.Join(";", parts), scope);
+                }
+            }
+            catch { }
+        }
+
+        onProgress?.Invoke("Configuring Windows shortcuts & uninstaller...", 80);
+        string exePath = Path.Combine(targetDir, "PilgrimCleaner.exe");
+        Type? shellType = Type.GetTypeFromProgID("WScript.Shell");
+        if (shellType != null)
+        {
+            dynamic? shell = Activator.CreateInstance(shellType);
+            if (shell != null)
+            {
+                if (createStartShortcut)
+                {
+                    var folder = isAdmin ? Environment.SpecialFolder.CommonPrograms : Environment.SpecialFolder.Programs;
+                    string programsDir = Path.Combine(Environment.GetFolderPath(folder), "Pilgrim Cleaner");
+                    Directory.CreateDirectory(programsDir);
+                    dynamic shortcut = shell.CreateShortcut(Path.Combine(programsDir, "Pilgrim Cleaner.lnk"));
+                    shortcut.TargetPath = exePath;
+                    shortcut.WorkingDirectory = targetDir;
+                    shortcut.Description = "Pilgrim Cleaner - Windows Storage Cleaner, App Manager, Hardware Health & Sysadmin CLI";
+                    shortcut.Save();
+                }
+
+                if (createDesktopShortcut)
+                {
+                    string desktopDir = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                    if (!string.IsNullOrWhiteSpace(desktopDir) && Directory.Exists(desktopDir))
+                    {
+                        dynamic shortcut = shell.CreateShortcut(Path.Combine(desktopDir, "Pilgrim Cleaner.lnk"));
+                        shortcut.TargetPath = exePath;
+                        shortcut.WorkingDirectory = targetDir;
+                        shortcut.Description = "Pilgrim Cleaner - Windows Storage Cleaner, App Manager, Hardware Health & Sysadmin CLI";
+                        shortcut.Save();
+                    }
+                }
+            }
+        }
+
+        RegisterUninstaller(targetDir, exePath, isAdmin);
+        onProgress?.Invoke("Installation completed successfully!", 100);
+    }
+
+    private static void RegisterUninstaller(string targetDir, string exePath, bool isAdmin)
+    {
+        try
+        {
+            string regRoot = isAdmin ? "HKLM" : "HKCU";
+            string uninstallBatch = Path.Combine(targetDir, "Uninstall.bat");
+            string script = $@"@echo off
+title Uninstalling Pilgrim Cleaner...
+taskkill /f /im PilgrimCleaner.exe 2>nul
+taskkill /f /im pilgrim.exe 2>nul
+taskkill /f /im LuminaCleaner.exe 2>nul
+timeout /t 1 /nobreak >nul
+reg delete ""{regRoot}\Software\Microsoft\Windows\CurrentVersion\Uninstall\PilgrimCleaner"" /f >nul 2>&1
+del ""%APPDATA%\Microsoft\Windows\Start Menu\Programs\Pilgrim Cleaner\Pilgrim Cleaner.lnk"" >nul 2>&1
+rd ""%APPDATA%\Microsoft\Windows\Start Menu\Programs\Pilgrim Cleaner"" >nul 2>&1
+del ""%USERPROFILE%\Desktop\Pilgrim Cleaner.lnk"" >nul 2>&1
+cd ""%TEMP%""
+start /b """" cmd /c ""timeout /t 2 /nobreak >nul & rd /s /q """"{targetDir}""""""
+echo Pilgrim Cleaner was successfully uninstalled.
+if not ""%1""==""--silent"" pause";
+            File.WriteAllText(uninstallBatch, script);
+
+            RegistryKey baseKey = isAdmin ? Registry.LocalMachine : Registry.CurrentUser;
+            using var key = baseKey.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\PilgrimCleaner");
+            if (key != null)
+            {
+                key.SetValue("DisplayName", "Pilgrim Cleaner");
+                key.SetValue("DisplayVersion", Program.SetupVersion);
+                key.SetValue("Publisher", "Pilgrim Software");
+                key.SetValue("DisplayIcon", exePath);
+                key.SetValue("InstallLocation", targetDir);
+                key.SetValue("UninstallString", $"\"{uninstallBatch}\"");
+                key.SetValue("QuietUninstallString", $"\"{uninstallBatch}\" --silent");
+                key.SetValue("NoModify", 1, RegistryValueKind.DWord);
+                key.SetValue("NoRepair", 1, RegistryValueKind.DWord);
+            }
+        }
+        catch { }
     }
 }
 
@@ -28,20 +211,32 @@ public class InstallerWindow : Window
     private readonly Button _actionButton;
     private readonly CheckBox _desktopShortcutCheck;
     private readonly CheckBox _startMenuShortcutCheck;
+    private readonly CheckBox _cliPathCheck;
     private readonly CheckBox _launchCheck;
     private readonly TextBox _targetPathBox;
+    private readonly bool _isAdmin;
     private bool _isCompleted = false;
 
-    public InstallerWindow()
+    public InstallerWindow(string defaultTarget, bool isAdmin)
     {
-        Title = "Pilgrim Cleaner — Setup Wizard";
-        Width = 560;
-        Height = 440;
+        _isAdmin = isAdmin;
+        Title = $"Pilgrim Cleaner v{Program.SetupVersion} — Setup Wizard";
+        Width = 580;
+        Height = 485;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         ResizeMode = ResizeMode.NoResize;
         Background = new SolidColorBrush(Color.FromRgb(0x07, 0x0D, 0x16));
         Foreground = Brushes.White;
         FontFamily = new FontFamily("Segoe UI Variable Display, Segoe UI, sans-serif");
+        FontSize = 13.5;
+
+        MouseLeftButtonDown += (s, e) =>
+        {
+            if (e.ButtonState == System.Windows.Input.MouseButtonState.Pressed)
+            {
+                try { DragMove(); } catch { }
+            }
+        };
 
         var mainGrid = new Grid { Margin = new Thickness(24) };
         mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // Header
@@ -49,17 +244,17 @@ public class InstallerWindow : Window
         mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // Footer / Buttons
 
         // --- Header ---
-        var headerPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 20) };
+        var headerPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 18) };
         var titleText = new TextBlock
         {
-            Text = "Pilgrim Cleaner Setup",
+            Text = $"Pilgrim Cleaner v{Program.SetupVersion} Setup",
             FontSize = 20,
             FontWeight = FontWeights.Bold,
             Foreground = new SolidColorBrush(Color.FromRgb(0x00, 0xE5, 0xFF))
         };
         var subtitleText = new TextBlock
         {
-            Text = "Windows Disk Cleaner, App Residue & Driver Health by Pilgrim Software",
+            Text = "Windows Disk Cleaner, Server Maintenance & Sysadmin CLI by Pilgrim Software",
             FontSize = 12,
             Foreground = new SolidColorBrush(Color.FromRgb(0x94, 0xA3, 0xB8)),
             Margin = new Thickness(0, 4, 0, 0)
@@ -72,10 +267,9 @@ public class InstallerWindow : Window
         // --- Body ---
         var bodyPanel = new StackPanel();
 
-        // Destination Box
         var destLabel = new TextBlock
         {
-            Text = "Installation Folder:",
+            Text = isAdmin ? "Installation Folder (Machine-Wide / AppLocker Compliant):" : "Installation Folder (Current User):",
             FontSize = 12,
             FontWeight = FontWeights.SemiBold,
             Foreground = Brushes.White,
@@ -83,7 +277,6 @@ public class InstallerWindow : Window
         };
         bodyPanel.Children.Add(destLabel);
 
-        string defaultTarget = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "Pilgrim Cleaner");
         _targetPathBox = new TextBox
         {
             Text = defaultTarget,
@@ -92,12 +285,11 @@ public class InstallerWindow : Window
             Foreground = Brushes.White,
             BorderBrush = new SolidColorBrush(Color.FromRgb(0x1C, 0x2E, 0x46)),
             Padding = new Thickness(8, 6, 8, 6),
-            Margin = new Thickness(0, 0, 0, 16),
+            Margin = new Thickness(0, 0, 0, 14),
             IsReadOnly = true
         };
         bodyPanel.Children.Add(_targetPathBox);
 
-        // Options
         var optionsLabel = new TextBlock
         {
             Text = "Installation Options:",
@@ -122,21 +314,28 @@ public class InstallerWindow : Window
             Foreground = new SolidColorBrush(Color.FromRgb(0xCB, 0xD5, 0xE1)),
             Margin = new Thickness(0, 0, 0, 8)
         };
+        _cliPathCheck = new CheckBox
+        {
+            Content = "Register 'pilgrim' CLI in Windows PATH (for PowerShell / Sysadmins)",
+            IsChecked = true,
+            Foreground = new SolidColorBrush(Color.FromRgb(0x00, 0xE5, 0xFF)),
+            Margin = new Thickness(0, 0, 0, 8)
+        };
         _launchCheck = new CheckBox
         {
             Content = "Launch Pilgrim Cleaner when setup finishes",
             IsChecked = true,
             Foreground = new SolidColorBrush(Color.FromRgb(0xCB, 0xD5, 0xE1)),
-            Margin = new Thickness(0, 0, 0, 16)
+            Margin = new Thickness(0, 0, 0, 14)
         };
         bodyPanel.Children.Add(_desktopShortcutCheck);
         bodyPanel.Children.Add(_startMenuShortcutCheck);
+        bodyPanel.Children.Add(_cliPathCheck);
         bodyPanel.Children.Add(_launchCheck);
 
-        // Status & Progress Bar
         _statusText = new TextBlock
         {
-            Text = "Ready to install Pilgrim Cleaner v1.0.0.",
+            Text = $"Ready to install Pilgrim Cleaner v{Program.SetupVersion} (GUI + Sysadmin CLI).",
             FontSize = 11.5,
             Foreground = new SolidColorBrush(Color.FromRgb(0x94, 0xA3, 0xB8)),
             Margin = new Thickness(0, 0, 0, 6)
@@ -162,7 +361,7 @@ public class InstallerWindow : Window
         {
             Orientation = Orientation.Horizontal,
             HorizontalAlignment = HorizontalAlignment.Right,
-            Margin = new Thickness(0, 16, 0, 0)
+            Margin = new Thickness(0, 14, 0, 0)
         };
 
         var cancelButton = new Button
@@ -222,93 +421,30 @@ public class InstallerWindow : Window
         string targetDir = _targetPathBox.Text;
         bool createStartShortcut = _startMenuShortcutCheck.IsChecked == true;
         bool createDesktopShortcut = _desktopShortcutCheck.IsChecked == true;
+        bool addToPath = _cliPathCheck.IsChecked == true;
 
         try
         {
-            _statusText.Text = "Stopping running Pilgrim Cleaner instances...";
-            _progressBar.Value = 10;
             await Task.Run(() =>
             {
-                foreach (var procName in new[] { "PilgrimCleaner", "LuminaCleaner" })
-                {
-                    foreach (var p in Process.GetProcessesByName(procName))
+                InstallerEngine.InstallPackage(
+                    targetDir,
+                    createStartShortcut,
+                    createDesktopShortcut,
+                    addToPath,
+                    _isAdmin,
+                    (msg, pct) =>
                     {
-                        try { p.Kill(); p.WaitForExit(1000); } catch { }
-                    }
-                }
-            });
-
-            _statusText.Text = "Extracting application package...";
-            _progressBar.Value = 30;
-
-            await Task.Run(() =>
-            {
-                if (!Directory.Exists(targetDir))
-                {
-                    Directory.CreateDirectory(targetDir);
-                }
-
-                var asm = Assembly.GetExecutingAssembly();
-                using var stream = asm.GetManifestResourceStream("PilgrimPayload.zip")
-                    ?? throw new InvalidOperationException("Embedded installer payload not found.");
-
-                using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
-                foreach (var entry in archive.Entries)
-                {
-                    string destPath = Path.Combine(targetDir, entry.FullName);
-                    if (string.IsNullOrEmpty(entry.Name))
-                    {
-                        Directory.CreateDirectory(destPath);
-                    }
-                    else
-                    {
-                        Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
-                        entry.ExtractToFile(destPath, true);
-                    }
-                }
-            });
-
-            _statusText.Text = "Configuring Windows shortcuts...";
-            _progressBar.Value = 70;
-
-            await Task.Run(() =>
-            {
-                string exePath = Path.Combine(targetDir, "PilgrimCleaner.exe");
-                Type? shellType = Type.GetTypeFromProgID("WScript.Shell");
-                if (shellType != null)
-                {
-                    dynamic? shell = Activator.CreateInstance(shellType);
-                    if (shell != null)
-                    {
-                        if (createStartShortcut)
+                        Dispatcher.Invoke(() =>
                         {
-                            string programsDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs), "Pilgrim Cleaner");
-                            Directory.CreateDirectory(programsDir);
-                            dynamic shortcut = shell.CreateShortcut(Path.Combine(programsDir, "Pilgrim Cleaner.lnk"));
-                            shortcut.TargetPath = exePath;
-                            shortcut.WorkingDirectory = targetDir;
-                            shortcut.Description = "Pilgrim Cleaner - Windows Storage Cleaner, App Manager & Hardware Health";
-                            shortcut.Save();
-                        }
-
-                        if (createDesktopShortcut)
-                        {
-                            string desktopDir = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                            dynamic shortcut = shell.CreateShortcut(Path.Combine(desktopDir, "Pilgrim Cleaner.lnk"));
-                            shortcut.TargetPath = exePath;
-                            shortcut.WorkingDirectory = targetDir;
-                            shortcut.Description = "Pilgrim Cleaner - Windows Storage Cleaner, App Manager & Hardware Health";
-                            shortcut.Save();
-                        }
-                    }
-                }
-
-                // Register uninstaller in Windows Settings (Add or Remove Programs)
-                RegisterUninstaller(targetDir, exePath);
+                            _statusText.Text = msg;
+                            _progressBar.Value = pct;
+                        });
+                    });
             });
 
             _progressBar.Value = 100;
-            _statusText.Text = "Installation completed successfully!";
+            _statusText.Text = "Installation completed! Both GUI and 'pilgrim' CLI are ready.";
             _statusText.Foreground = new SolidColorBrush(Color.FromRgb(0x00, 0xFF, 0x9D));
             _actionButton.Content = "Finish";
             _actionButton.Background = new SolidColorBrush(Color.FromRgb(0x00, 0xFF, 0x9D));
@@ -324,44 +460,5 @@ public class InstallerWindow : Window
             _actionButton.IsEnabled = true;
             _isCompleted = true;
         }
-    }
-
-    private static void RegisterUninstaller(string targetDir, string exePath)
-    {
-        try
-        {
-            string uninstallBatch = Path.Combine(targetDir, "Uninstall.bat");
-            if (!File.Exists(uninstallBatch))
-            {
-                string script = $@"@echo off
-title Uninstalling Pilgrim Cleaner...
-taskkill /f /im PilgrimCleaner.exe 2>nul
-taskkill /f /im LuminaCleaner.exe 2>nul
-timeout /t 1 /nobreak >nul
-reg delete ""HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\PilgrimCleaner"" /f >nul 2>&1
-del ""%APPDATA%\Microsoft\Windows\Start Menu\Programs\Pilgrim Cleaner\Pilgrim Cleaner.lnk"" >nul 2>&1
-rd ""%APPDATA%\Microsoft\Windows\Start Menu\Programs\Pilgrim Cleaner"" >nul 2>&1
-del ""%USERPROFILE%\Desktop\Pilgrim Cleaner.lnk"" >nul 2>&1
-cd ""%TEMP%""
-start /b """" cmd /c ""timeout /t 2 /nobreak >nul & rd /s /q """"{targetDir}""""""
-echo Pilgrim Cleaner was successfully uninstalled.
-pause";
-                File.WriteAllText(uninstallBatch, script);
-            }
-
-            using var key = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\PilgrimCleaner");
-            if (key != null)
-            {
-                key.SetValue("DisplayName", "Pilgrim Cleaner");
-                key.SetValue("DisplayVersion", "1.0.0");
-                key.SetValue("Publisher", "Pilgrim Software");
-                key.SetValue("DisplayIcon", exePath);
-                key.SetValue("InstallLocation", targetDir);
-                key.SetValue("UninstallString", $"\"{uninstallBatch}\"");
-                key.SetValue("NoModify", 1, RegistryValueKind.DWord);
-                key.SetValue("NoRepair", 1, RegistryValueKind.DWord);
-            }
-        }
-        catch { }
     }
 }

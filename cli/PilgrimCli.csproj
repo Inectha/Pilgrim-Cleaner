@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>pilgrim</AssemblyName>
+    <RootNamespace>LuminaCleaner.Cli</RootNamespace>
+    <ApplicationIcon>..\Assets\app.ico</ApplicationIcon>
+    <Product>Pilgrim Cleaner CLI</Product>
+    <Company>Pilgrim Software</Company>
+    <Description>Pilgrim Cleaner — Enterprise Windows &amp; Server Maintenance CLI for System Administrators</Description>
+    <Version>1.1.0</Version>
+    <AssemblyVersion>1.1.0.0</AssemblyVersion>
+    <FileVersion>1.1.0.0</FileVersion>
+    <Copyright>Copyright (C) 2026 Pilgrim Software</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PilgrimCleaner.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,9 +1,9 @@
 # Pilgrim Cleaner
-An open-source, non-destructive Windows maintenance utility built with C# and WPF.
+An open-source, non-destructive Windows 10/11 & Windows Server maintenance utility and Sysadmin CLI built with C# and WPF.
 
-[![Framework](https://img.shields.io/badge/.NET-8.0%20WPF-512BD4.svg)](https://dotnet.microsoft.com/)
+[![Framework](https://img.shields.io/badge/.NET-8.0%20WPF%20%2B%20CLI-512BD4.svg)](https://dotnet.microsoft.com/)
 [![UI](https://img.shields.io/badge/UI-WPF--UI%20%28Fluent%202%20%2F%20Mica%29-0078D4.svg)](https://wpfui.lepo.co/)
-[![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%7C%20Windows%2011-0078D4.svg)](https://www.microsoft.com/windows)
+[![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11%20%7C%20Windows%20Server-0078D4.svg)](https://www.microsoft.com/windows)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Built With](https://img.shields.io/badge/Pair%20Programmed%20With-Google%20Antigravity-4285F4.svg)](https://deepmind.google/technologies/gemini/)
 
@@ -52,6 +52,7 @@ I developed this utility using **[Google Antigravity](https://deepmind.google/te
 - **Recycle Bin:** Queries and empties the Windows Recycle Bin using native `SHEmptyRecycleBinW` and `SHQueryRecycleBinW` APIs.
 - **Windows Delivery Optimization:** Cleans staged update packages in `%SystemRoot%\SoftwareDistribution\Download`.
 - **Developer Caches:** Safely removes intermediate build artifacts and package manager caches for NPM, NuGet, Cargo, Pip, Gradle, and Rust (`target` folders).
+- **Server & CBS Archived Logs (`server_logs`):** Reclaims disk space from rotated IIS Web Server logs (`%SystemDrive%\inetpub\logs\LogFiles\W3SVC*`) and archived Windows Component-Based Servicing (`CbsPersist_*`) logs while strictly preserving active logs and enforcing a configurable retention window (default 14 days).
 - **Thumbnail Cache:** Reclaims corrupted or bloated Windows Explorer thumbnail databases (`thumbcache_*.db`).
 
 ### 3. Space Lens (Large & Old Files Explorer)
@@ -98,7 +99,35 @@ I developed this utility using **[Google Antigravity](https://deepmind.google/te
 - **Native Toast Notifications:** If recoverable cache exceeds the configured threshold, a native Windows 11 notification banner is displayed inviting the user to open the app and review.
 
 ### 11. Built-In User Manual
-- **12 Searchable Chapters:** Built directly into the application with instant keyword search covering safety rules, architecture, module explanations, and FAQ.
+- **13 Searchable Chapters:** Built directly into the application with instant keyword search covering safety rules, architecture, module explanations, Sysadmin CLI reference, and FAQ.
+
+### 12. Sysadmin CLI (`pilgrim.exe`) & Windows Server Edition
+- **Native Console Binary (`pilgrim.exe`):** Ships alongside the WPF GUI for headless execution in PowerShell, SSH, WinRM, Microsoft Intune, SCCM, and RMM platforms (NinjaOne, Datto, Atera).
+- **Preset Execution Profiles (`--profile`):**
+  - `server-safe` — Targets `system_temp`, `crash_dumps`, `delivery_optimization`, and `server_logs` (IIS & CBS logs >14 days); skips browser and developer caches.
+  - `rds` — Automatically enables `--all-profiles` to audit and clean across all user profiles (`C:\Users\*`) on Remote Desktop Services / Citrix / AVD multi-session hosts while enforcing the 24-hour active file guardrail.
+  - `workstation` — Standard endpoint maintenance across user and system caches.
+- **Structured JSON Output (`--json`):** Pipe audit and cleanup telemetry directly into PowerShell (`pilgrim audit --json | ConvertFrom-Json`).
+- **Windows Event Log Integration (`--event-log`):** Writes structured events (IDs `1000`–`1003`, Source `PilgrimCleaner`) to the Windows Application Event Log for RMM monitoring.
+- **In-Terminal Sysadmin Manual (`pilgrim man`):** Offline terminal man-pages covering `overview`, `profiles`, `security`, `automation`, and `exitcodes`.
+
+```powershell
+# Interactive storage audit using the Windows Server safe profile
+pilgrim audit --profile server-safe
+
+# RMM / PowerShell JSON pipeline with threshold check
+$audit = pilgrim audit --profile server-safe --json | ConvertFrom-Json
+if ($audit.totalRecoverableBytes -gt 5GB) {
+    pilgrim clean --profile server-safe --force --event-log
+}
+
+# Multi-user Terminal Server (RDS / Citrix / AVD) cleanup across all C:\Users\* profiles
+pilgrim clean --profile rds --force --event-log
+
+# View the built-in terminal manual
+pilgrim man
+pilgrim man automation
+```
 
 ---
 
@@ -106,6 +135,7 @@ I developed this utility using **[Google Antigravity](https://deepmind.google/te
 
 - **Runtime:** .NET 8.0 Desktop (`net8.0-windows`)
 - **UI Framework:** Windows Presentation Foundation (WPF) with `WPF-UI 4.3.0`
+- **CLI Companion:** Native Console Subsystem (`pilgrim.exe`, `cli/PilgrimCli.csproj`) sharing the core module engine
 - **Design System:** Windows 11 Fluent Design 2 with Mica / Acrylic backdrop materials
 - **Architecture Pattern:** MVVM (Model-View-ViewModel) using `CommunityToolkit.Mvvm 8.4.2`
 - **Multi-Threading:** Collection synchronization via `BindingOperations.EnableCollectionSynchronization` for thread-safe UI updates from background workers
@@ -115,16 +145,18 @@ I developed this utility using **[Google Antigravity](https://deepmind.google/te
 
 ## Installation Options
 
-### 1. 1-Click Native Installer (Recommended)
-Download the release archive, extract it, and run **`Install.bat`**. This deploys Pilgrim Cleaner to `%LOCALAPPDATA%\Programs\Pilgrim Cleaner`, creates Desktop and Start Menu shortcuts, and registers the app in Windows Settings (*Installed Apps*).
+### 1. Setup Wizard (`PilgrimCleanerSetup.exe`) & Unattended Deploy
+Download and run **`PilgrimCleanerSetup.exe`** from [GitHub Releases](https://github.com/Inectha/Pilgrim-Cleaner/releases).
+- When run as **Administrator**, installs to `C:\Program Files\Pilgrim Cleaner` (AppLocker & WDAC compliant) and registers `pilgrim.exe` in the system `PATH`.
+- Supports unattended silent deployment for RMM/Intune/Winget: `PilgrimCleanerSetup.exe /S`
 
-### 2. Portable ZIP (Zero Installation)
-Download **`PilgrimCleaner-v1.0.0-Windows-x64.zip`**, extract anywhere, and launch `PilgrimCleaner.exe` directly. No registry entries or system folders are modified.
+### 2. 1-Click Native PowerShell / Batch Installer
+Download the release archive, extract it, and run **`Install.bat`** (or `.\Install-PilgrimCleaner.ps1 -Machine -Silent` from an elevated PowerShell prompt for Windows Server deployment).
 
-### 3. Setup Wizard (`PilgrimCleanerSetup.exe`)
-Download and run the standalone setup wizard from [GitHub Releases](https://github.com/Inectha/Pilgrim-Cleaner/releases) for a guided installation.
+### 3. Portable ZIP (Zero Installation)
+Download **`PilgrimCleaner-v1.1.0-Windows-x64.zip`**, extract anywhere, and run `PilgrimCleaner.exe` (GUI) or `pilgrim.exe` (CLI) directly.
 
-See [**INSTALL.md**](INSTALL.md) for detailed installation and uninstallation instructions.
+See [**INSTALL.md**](INSTALL.md) for detailed workstation and Windows Server deployment instructions.
 
 ---
 

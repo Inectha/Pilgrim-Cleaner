@@ -1,4 +1,4 @@
-﻿// Lumina Cleaner - Enterprise Windows Disk Cleaner & Optimizer
+// Lumina Cleaner - Enterprise Windows Disk Cleaner & Optimizer
 // Copyright (C) 2026 Pilgrim Software
 //
 // This program is free software: you can redistribute it and/or modify
@@ -35,4 +35,27 @@ public class EngineOptions
     /// Maximum parallel tasks during folder exploration.
     /// </summary>
     public int MaxDegreeOfParallelism { get; set; } = Environment.ProcessorCount;
+
+    /// <summary>
+    /// When true and running with administrative/SYSTEM privileges, enumerates target folders
+    /// across all user profiles under C:\Users\* (ideal for Windows Server / RDS / Citrix).
+    /// </summary>
+    public bool AllProfiles { get; set; } = false;
+
+    /// <summary>
+    /// Optimizes execution for CLI and unattended background tasks by bypassing UI dispatcher
+    /// synchronization and per-item UI property change wiring.
+    /// </summary>
+    public bool HeadlessMode { get; set; } = false;
+
+    /// <summary>
+    /// Minimum age threshold for Windows Server logs (IIS W3SVC logs and archived CBS logs).
+    /// Default is 14 days to preserve recent diagnostic and security audit trails.
+    /// </summary>
+    public TimeSpan ServerLogRetention { get; set; } = TimeSpan.FromDays(14);
+
+    /// <summary>
+    /// Active execution profile preset (Default, Workstation, ServerSafe, Rds).
+    /// </summary>
+    public CleanupProfile Profile { get; set; } = CleanupProfile.Default;
 }

@@ -186,13 +186,18 @@ public abstract partial class CleanerModuleBase : ObservableObject, ICleanerModu
 
     protected void AddDiscoveredItem(CleanItemModel item)
     {
-        item.PropertyChanged += (s, e) =>
+        bool hasGuiDispatcher = System.Windows.Application.Current != null;
+
+        if (hasGuiDispatcher)
         {
-            if (e.PropertyName == nameof(CleanItemModel.IsSelected))
+            item.PropertyChanged += (s, e) =>
             {
-                UpdateSelectionMetrics();
-            }
-        };
+                if (e.PropertyName == nameof(CleanItemModel.IsSelected))
+                {
+                    UpdateSelectionMetrics();
+                }
+            };
+        }
 
         void InternalAdd()
         {
@@ -216,9 +221,12 @@ public abstract partial class CleanerModuleBase : ObservableObject, ICleanerModu
                     SkippedCount++;
                 }
 
-                OnPropertyChanged(nameof(FormattedTotalSize));
-                OnPropertyChanged(nameof(FormattedSelectedSize));
-                OnPropertyChanged(nameof(FormattedSkippedSize));
+                if (hasGuiDispatcher)
+                {
+                    OnPropertyChanged(nameof(FormattedTotalSize));
+                    OnPropertyChanged(nameof(FormattedSelectedSize));
+                    OnPropertyChanged(nameof(FormattedSkippedSize));
+                }
             }
         }
 
@@ -310,12 +318,14 @@ public abstract partial class CleanerModuleBase : ObservableObject, ICleanerModu
             if (!fi.Exists)
                 return (true, null);
 
-            if (NativeMethods.IsFileLocked(fi))
-                return (false, "File is currently locked by a running process or Windows service.");
-
             if (dryRun)
+            {
                 return (true, null);
+            }
 
+            // Atomic direct unlink without pre-opening a FileAccess.ReadWrite stream.
+            // Pre-opening files for ReadWrite before deleting triggers EDR ransomware behavioral heuristics
+            // and doubles I/O syscalls. Windows kernel natively blocks deletion of open/locked files with IOException.
             if ((fi.Attributes & FileAttributes.ReadOnly) != 0)
             {
                 fi.Attributes &= ~FileAttributes.ReadOnly;
@@ -326,11 +336,11 @@ public abstract partial class CleanerModuleBase : ObservableObject, ICleanerModu
         }
         catch (UnauthorizedAccessException)
         {
-            return (false, "Unauthorized: Access denied by system security.");
+            return (false, "Unauthorized: Access denied by system security or file is locked by a protected service.");
         }
         catch (IOException ex)
         {
-            return (false, $"I/O Lock: {ex.Message}");
+            return (false, $"File is currently locked by a running process or Windows service ({ex.Message})");
         }
         catch (Exception ex)
         {

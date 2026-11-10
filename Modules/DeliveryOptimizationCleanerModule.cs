@@ -57,6 +57,7 @@ public class DeliveryOptimizationCleanerModule : CleanerModuleBase
 
         var discovered = new List<CleanItemModel>();
         int skippedCount = 0;
+        long skippedBytes = 0;
         long totalBytes = 0;
 
         await Task.Run(() =>
@@ -64,7 +65,7 @@ public class DeliveryOptimizationCleanerModule : CleanerModuleBase
             if (!IsElevationAvailable)
             {
                 progress.Report(new ScanProgressReport(
-                    "Elevation required: Run Lumina Suite Pro as Administrator to audit SoftwareDistribution cache.",
+                    "Elevation required: Run Pilgrim Cleaner as Administrator to audit SoftwareDistribution cache.",
                     0,
                     0,
                     Name,
@@ -74,17 +75,29 @@ public class DeliveryOptimizationCleanerModule : CleanerModuleBase
 
             if (!Directory.Exists(_downloadCachePath)) return;
 
+            DateTime now = DateTime.UtcNow;
+
             foreach (var file in SafeEnumerateFiles(_downloadCachePath))
             {
                 if (ct.IsCancellationRequested) break;
 
                 long length = 0;
+                DateTime lastWriteUtc = DateTime.MinValue;
                 try
                 {
                     length = file.Length;
+                    lastWriteUtc = file.LastWriteTimeUtc;
                 }
                 catch
                 {
+                    continue;
+                }
+
+                TimeSpan age = now - lastWriteUtc;
+                if (age < options.AgeSafetyBuffer)
+                {
+                    skippedCount++;
+                    skippedBytes += length;
                     continue;
                 }
 
@@ -117,9 +130,15 @@ public class DeliveryOptimizationCleanerModule : CleanerModuleBase
             AddDiscoveredItem(item);
         }
 
+        SkippedSizeBytes = skippedBytes;
+        SkippedCount = skippedCount;
+        SkippedReasonSummary = skippedCount > 0
+            ? $"{skippedCount:N0} active update staging files ({CleanItemModel.FormatBytes(skippedBytes)}) protected by 24h buffer."
+            : "All inspected update staging files are older than 24h.";
+
         sw.Stop();
         IsScanning = false;
-        return new ModuleScanResult(Id, discovered, totalBytes, 0, skippedCount, sw.Elapsed);
+        return new ModuleScanResult(Id, discovered, totalBytes, skippedBytes, skippedCount, sw.Elapsed);
     }
 
     public override async Task<ModuleCleanResult> CleanAsync(

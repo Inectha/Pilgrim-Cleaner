@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.0] — 2026-11-10
+
+### Added
+- **Sysadmin CLI (`pilgrim.exe`) & Windows Server Edition (`cli/PilgrimCli.csproj`):**
+  - Native Windows Console Subsystem binary (`pilgrim.exe`) supporting interactive terminal tables, ANSI color themes, and headless execution in PowerShell, SSH, WinRM, Intune, and RMM tools.
+  - Subcommands: `pilgrim audit`, `pilgrim clean`, `pilgrim status`, `pilgrim modules`, and `pilgrim man [topic]`.
+  - Structured JSON output (`--json`) for seamless PowerShell pipeline integration (`ConvertFrom-Json`).
+  - Built-in offline Sysadmin Terminal Manual (`pilgrim man overview|profiles|security|automation|exitcodes`).
+- **Execution Profiles (`--profile`):**
+  - `server-safe`: Targets `system_temp`, `crash_dumps`, `delivery_optimization`, and `server_logs` while skipping browser and developer caches.
+  - `rds`: Designed for multi-session Terminal Servers (RDS / Citrix / AVD); automatically enables `--all-profiles`.
+  - `workstation`: Standard endpoint cleanup profile.
+- **Multi-User Profile Enumeration (`--all-profiles` & `SYSTEM` Context):**
+  - `UserProfileResolver` safely enumerates all user profiles in `C:\Users\*` (excluding `Public`, `Default`, and NTFS ReparsePoints/junctions) when running elevated or under `NT AUTHORITY\SYSTEM`.
+  - Multi-SID `$Recycle.Bin` enumeration when running elevated with `--all-profiles`.
+- **Windows Server & CBS Archived Logs Module (`server_logs`):**
+  - Safely audits and purges rotated IIS Web Server logs (`%SystemDrive%\inetpub\logs\LogFiles\W3SVC*`) and archived Windows Component-Based Servicing (`CbsPersist_*`) logs older than the configurable retention window (default 14 days).
+- **Windows Event Log Integration (`--event-log`):**
+  - Writes structured operational events (IDs `1000`–`1003`, Source `PilgrimCleaner`) to the Windows Application Event Log for enterprise RMM monitoring.
+- **Enterprise Machine-Wide Installer & Winget Manifests:**
+  - `PilgrimCleanerSetup.exe` and `Install-PilgrimCleaner.ps1` now automatically install to `C:\Program Files\Pilgrim Cleaner` (AppLocker/WDAC compliant) when run as Administrator, register `pilgrim.exe` in `PATH`, and support silent `/S` installation.
+  - Added multi-file Winget package manifests (`winget/PilgrimSoftware.PilgrimCleaner*.yaml`).
+
+### Changed & Fixed (Security & Engine Audit)
+- **EDR & Ransomware Heuristic Prevention (`CleanerModuleBase.SafeDeleteFile`):**
+  - Removed pre-delete `FileStream(..., FileAccess.ReadWrite, FileShare.None)` lock probing which doubled I/O syscalls and could trigger behavioral ransomware alerts in enterprise EDR sensors (CrowdStrike, Defender for Endpoint). File deletion now uses direct atomic unlink with native kernel sharing-violation handling.
+- **Universal 24-Hour Age Safety Buffer:**
+  - Enforced `EngineOptions.AgeSafetyBuffer` (default 24h) across `DeliveryOptimizationCleanerModule`, `CrashDumpsCleanerModule`, and `BrowserCacheCleanerModule` to protect in-progress Windows Updates and fresh incident crash dumps.
+- **Authentic WinSxS Measurement (`DismComponentCleanerModule`):**
+  - Replaced the static 2.0 GB estimate with real byte measurement of WinSxS staging/temp/manifest folders and prevented interactive UAC prompts during headless CLI runs.
+
+---
+
 ## [1.0.0] — 2026-11-08
 
 ### Added

@@ -85,33 +85,36 @@ Pilgrim Cleaner stands fundamentally apart from shady third-party utilities thro
                 Id = "storage_modules",
                 Title = "3. Storage Modules & Safe Cleanup Rules",
                 Category = "Storage & Cleanup",
-                Summary = "Detailed breakdown of the 7 core cleaner modules, from System Temp and Browser Caches to DISM WinSxS.",
+                Summary = "Detailed breakdown of the 8 core cleaner modules, from System Temp and Browser Caches to Server Logs and DISM WinSxS.",
                 IconSymbol = SymbolRegular.Storage24,
-                Keywords = ["modules", "temp", "crash", "dumps", "browser", "recycle", "delivery", "developer", "dism", "winsxs", "storage"],
+                Keywords = ["modules", "temp", "crash", "dumps", "browser", "recycle", "delivery", "developer", "dism", "winsxs", "server", "iis", "cbs", "storage"],
                 NavigationTargetView = "Modules",
                 Content =
 @"CORE STORAGE CLEANER MODULES:
 
 • System Temporary Files (%TEMP%, C:\Windows\Temp):
-  Cleans stale temporary files left behind by completed application sessions, strictly preserving files modified within the last 24 hours.
+  Cleans stale temporary files left behind by completed application sessions, strictly preserving files modified within the last 24 hours. Supports multi-profile RDS scanning (--all-profiles).
 
 • Windows Crash Dumps & Diagnostic Minidumps:
-  Reclaims disk space by purging historical memory crash dumps (%SystemRoot%\MEMORY.DMP and Minidump files) while keeping recent diagnostics.
+  Reclaims disk space by purging historical memory crash dumps (%SystemRoot%\MEMORY.DMP, Minidump, and WER ReportQueue/ReportArchive) while keeping recent diagnostics (>24h safety buffer).
 
 • Browser Caches (Edge, Chrome, Brave, Firefox):
-  Cleans cached web images, script buffers, and offline media caches without deleting saved passwords, cookies, or browser history.
+  Cleans cached web images, script buffers, and offline media caches (>24h) without deleting saved passwords, cookies, or browser history.
 
 • Windows Recycle Bin (Native Shell32 API):
   Safely queries and empties the Recycle Bin across all fixed drives via the official Windows Shell32 API (SHEmptyRecycleBinW).
 
 • Delivery Optimization Cache:
-  Purges stale peer-to-peer Windows Update delivery cache packages that have already been distributed.
+  Purges stale peer-to-peer Windows Update delivery cache packages (>24h) that have already been distributed.
 
 • Developer & Package Manager Caches:
   Reclaims gigabytes of disk space from package caches: NuGet, npm, pnpm, Python Pip, and Rust Cargo.
 
+• Windows Server & IIS Logs (W3SVC & CBS):
+  Purges rotated IIS W3SVC access logs (%SystemDrive%\inetpub\logs\LogFiles) and archived CBS servicing logs (CbsPersist_*.log/.cab) older than 14 days while never touching active log files.
+
 • DISM Windows Component Store (WinSxS):
-  Analyzes and optimizes the Windows Component Store using DISM (/AnalyzeComponentStore and /StartComponentCleanup) with graceful administrator elevation."
+  Analyzes real WinSxS Temp/Backup staging directories and optimizes the Windows Component Store using DISM (/StartComponentCleanup) with graceful administrator elevation."
             },
 
             new HelpArticleModel
@@ -334,6 +337,42 @@ Q: Under which license is Pilgrim Cleaner released?
 A: Pilgrim Cleaner is Free and Open Source Software released under the GNU General Public License version 3 (GPLv3). You have the complete freedom to inspect, run, modify, and redistribute the software.
 
 Copyright (C) 2026 Pilgrim Software. All rights reserved."
+            },
+
+            new HelpArticleModel
+            {
+                Id = "sysadmin_cli_guide",
+                Title = "13. Sysadmin CLI (pilgrim.exe) & Windows Server Guide",
+                Category = "System Management",
+                Summary = "Headless CLI tool, Windows Server & RDS profiles, JSON telemetry pipelines, Event Log integration, and EDR/AppLocker safety.",
+                IconSymbol = SymbolRegular.WindowConsole20,
+                Keywords = ["cli", "sysadmin", "server", "rds", "json", "powershell", "intune", "rmm", "winget", "applocker", "manual"],
+                NavigationTargetView = "Automation",
+                Content =
+@"SYSADMIN CLI (pilgrim.exe) & WINDOWS SERVER MAINTENANCE:
+
+Pilgrim Cleaner includes a native console companion binary ('pilgrim.exe') designed for Windows System Administrators, MSPs, and DevOps engineers managing Windows 10/11 Workstations, Windows Servers (2019/2022/2025), and Remote Desktop Services (RDS / Citrix / AVD).
+
+1. CORE CLI COMMANDS:
+• pilgrim audit   [--profile <name>] [--modules <list>] [--all-profiles] [--json]
+• pilgrim clean   [--profile <name>] [--dry-run] [--force] [--all-profiles] [--event-log] [--json]
+• pilgrim status  [--json]
+• pilgrim modules [--json]
+• pilgrim man     [overview | profiles | security | automation | exitcodes]
+
+2. BUILT-IN EXECUTION PROFILES (--profile):
+• server-safe : Targets system_temp, crash_dumps, delivery_optimization, and server_logs (IIS W3SVC & CBS archived logs >14d). Skips browser and developer caches.
+• rds         : Automatically activates --all-profiles across C:\Users\* for multi-session Terminal Servers while enforcing the 24-hour active session guardrail.
+• workstation : Standard endpoint cleanup across temp, dumps, browser caches, recycle bin, delivery optimization, and dev caches.
+
+3. POWERSHELL & RMM JSON PIPELINE EXAMPLE:
+  $audit = pilgrim audit --profile server-safe --json | ConvertFrom-Json
+  if ($audit.totalRecoverableBytes -gt 5GB) {
+      pilgrim clean --profile server-safe --force --event-log
+  }
+
+4. IN-TERMINAL MANUAL:
+Open PowerShell or Command Prompt and run 'pilgrim man' (or 'pilgrim man security', 'pilgrim man automation', 'pilgrim man exitcodes') for complete offline sysadmin documentation."
             }
         ];
     }

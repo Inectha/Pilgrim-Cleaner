@@ -112,9 +112,10 @@ public class DriverHealthService : IDriverHealthService
             var psi = new ProcessStartInfo
             {
                 FileName = "powershell.exe",
-                Arguments = "-NoProfile -NonInteractive -Command \"Get-CimInstance Win32_PnPSignedDriver | Where-Object { $_.DeviceName -ne $null } | Select-Object -First 60 DeviceName, DriverVersion, DriverDate, Signer, DeviceClass, DeviceID | ConvertTo-Json -Compress\"",
+                Arguments = "-NoProfile -NonInteractive -Command \"Get-CimInstance Win32_PnPSignedDriver -ErrorAction SilentlyContinue | Where-Object { $_.DeviceName -ne $null } | Select-Object -First 60 DeviceName, DriverVersion, DriverDate, Signer, DeviceClass, DeviceID | ConvertTo-Json -Compress\"",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
+                RedirectStandardError = true,
                 CreateNoWindow = true
             };
 

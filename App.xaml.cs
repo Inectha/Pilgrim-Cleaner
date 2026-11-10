@@ -26,11 +26,16 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        string logDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "PilgrimCleaner");
+
         AppDomain.CurrentDomain.UnhandledException += (s, args) =>
         {
             try
             {
-                File.WriteAllText("crash.log", args.ExceptionObject?.ToString());
+                Directory.CreateDirectory(logDir);
+                File.WriteAllText(Path.Combine(logDir, "crash.log"), args.ExceptionObject?.ToString());
             }
             catch { }
         };
@@ -39,7 +44,8 @@ public partial class App : Application
         {
             try
             {
-                File.WriteAllText("crash.log", args.Exception?.ToString());
+                Directory.CreateDirectory(logDir);
+                File.WriteAllText(Path.Combine(logDir, "crash.log"), args.Exception?.ToString());
             }
             catch { }
         };
@@ -51,7 +57,7 @@ public partial class App : Application
             Task.Run(async () =>
             {
                 var engine = new Services.EngineService();
-                var options = new Models.EngineOptions();
+                var options = new Models.EngineOptions { HeadlessMode = true };
                 var progress = new Progress<Models.ScanProgressReport>();
                 var results = await engine.ScanAllAsync(options, progress, System.Threading.CancellationToken.None);
                 long bytes = results.Sum(r => r.TotalBytes);

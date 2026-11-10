@@ -12,13 +12,13 @@
     <ApplicationTitle>Pilgrim Cleaner</ApplicationTitle>
     <Product>Pilgrim Cleaner</Product>
     <Company>Pilgrim Software</Company>
-    <Description>Pilgrim Cleaner - Windows Storage Cleaner, App Manager &amp; Hardware Health</Description>
-    <Version>1.0.0</Version>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <FileVersion>1.0.0.0</FileVersion>
+    <Description>Pilgrim Cleaner - Windows Storage Cleaner, App Manager, Hardware Health &amp; Sysadmin CLI</Description>
+    <Version>1.1.0</Version>
+    <AssemblyVersion>1.1.0.0</AssemblyVersion>
+    <FileVersion>1.1.0.0</FileVersion>
     <Copyright>Copyright (C) 2026 Pilgrim Software</Copyright>
     <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
-    <PackageTags>pilgrim-cleaner;windows-11;windows-cleaner;disk-cleaner;storage-optimizer;uninstaller;app-manager;driver-health;whql;duplicate-finder;space-lens;privacy-shield;task-scheduler;bleachbit-alternative;ccleaner-alternative;wpf;dotnet8;csharp;fluent-ui;mica;antigravity;pilgrim-software;open-source;system-utility</PackageTags>
+    <PackageTags>pilgrim-cleaner;windows-11;windows-server;sysadmin-cli;windows-cleaner;disk-cleaner;storage-optimizer;uninstaller;app-manager;driver-health;whql;duplicate-finder;space-lens;privacy-shield;task-scheduler;bleachbit-alternative;ccleaner-alternative;wpf;dotnet8;csharp;fluent-ui;mica;antigravity;pilgrim-software;open-source;system-utility</PackageTags>
     <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
@@ -26,12 +26,18 @@
     <Compile Remove="Tests\**" />
     <EmbeddedResource Remove="Tests\**" />
     <None Remove="Tests\**" />
+    <Compile Remove="cli\**" />
+    <EmbeddedResource Remove="cli\**" />
+    <None Remove="cli\**" />
     <Compile Remove="installer\**" />
     <EmbeddedResource Remove="installer\**" />
     <None Remove="installer\**" />
     <Compile Remove="dist\**" />
     <EmbeddedResource Remove="dist\**" />
     <None Remove="dist\**" />
+    <Compile Remove="winget\**" />
+    <EmbeddedResource Remove="winget\**" />
+    <None Remove="winget\**" />
   </ItemGroup>
 
   <ItemGroup>

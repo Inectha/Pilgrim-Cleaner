@@ -36,7 +36,16 @@ public enum CleanerCategory
     RecycleBin,
     DeliveryOptimization,
     DeveloperCaches,
-    ComponentStore
+    ComponentStore,
+    ServerLogs
+}
+
+public enum CleanupProfile
+{
+    Default,
+    Workstation,
+    ServerSafe,
+    Rds
 }
 
 public enum AppEngineState

@@ -1,4 +1,4 @@
-﻿// Lumina Cleaner - Enterprise Windows Disk Cleaner & Optimizer
+// Lumina Cleaner - Enterprise Windows Disk Cleaner & Optimizer
 // Copyright (C) 2026 Pilgrim Software
 //
 // This program is free software: you can redistribute it and/or modify
@@ -22,6 +22,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LuminaCleaner.Models;
+using LuminaCleaner.Services;
 using Wpf.Ui.Controls;
 
 namespace LuminaCleaner.Modules;
@@ -54,41 +55,47 @@ public class BrowserCacheCleanerModule : CleanerModuleBase
         }
     }
 
-    private IEnumerable<string> ResolveCacheDirectories()
+    private IEnumerable<string> ResolveCacheDirectories(bool includeAllProfiles)
     {
-        string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        var baseDirs = new[]
-        {
-            Path.Combine(localAppData, @"Google\Chrome\User Data"),
-            Path.Combine(localAppData, @"Microsoft\Edge\User Data")
-        };
-
+        var yielded = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var cacheFolderNames = new[] { "Cache", "Code Cache", "GPUCache", "DawnCache" };
 
-        foreach (var baseDir in baseDirs)
+        foreach (var profileRoot in UserProfileResolver.GetTargetUserProfiles(includeAllProfiles))
         {
-            if (!Directory.Exists(baseDir)) continue;
+            string localAppData = Path.Combine(profileRoot, "AppData", "Local");
+            if (!Directory.Exists(localAppData)) continue;
 
-            // Check Default profile
-            string defaultProfile = Path.Combine(baseDir, "Default");
-            if (Directory.Exists(defaultProfile))
+            var baseDirs = new[]
             {
-                foreach (var cacheName in cacheFolderNames)
+                Path.Combine(localAppData, @"Google\Chrome\User Data"),
+                Path.Combine(localAppData, @"Microsoft\Edge\User Data")
+            };
+
+            foreach (var baseDir in baseDirs)
+            {
+                if (!Directory.Exists(baseDir)) continue;
+
+                // Check Default profile
+                string defaultProfile = Path.Combine(baseDir, "Default");
+                if (Directory.Exists(defaultProfile))
                 {
-                    string p = Path.Combine(defaultProfile, cacheName);
-                    if (Directory.Exists(p)) yield return p;
+                    foreach (var cacheName in cacheFolderNames)
+                    {
+                        string p = Path.Combine(defaultProfile, cacheName);
+                        if (Directory.Exists(p) && yielded.Add(p)) yield return p;
+                    }
                 }
-            }
 
-            // Check additional profiles (Profile 1, Profile 2, etc.)
-            string[] subDirs = [];
-            try { subDirs = Directory.GetDirectories(baseDir, "Profile *"); } catch { }
-            foreach (var profileDir in subDirs)
-            {
-                foreach (var cacheName in cacheFolderNames)
+                // Check additional profiles (Profile 1, Profile 2, etc.)
+                string[] subDirs = [];
+                try { subDirs = Directory.GetDirectories(baseDir, "Profile *"); } catch { }
+                foreach (var profileDir in subDirs)
                 {
-                    string p = Path.Combine(profileDir, cacheName);
-                    if (Directory.Exists(p)) yield return p;
+                    foreach (var cacheName in cacheFolderNames)
+                    {
+                        string p = Path.Combine(profileDir, cacheName);
+                        if (Directory.Exists(p) && yielded.Add(p)) yield return p;
+                    }
                 }
             }
         }
@@ -105,11 +112,13 @@ public class BrowserCacheCleanerModule : CleanerModuleBase
 
         var discovered = new List<CleanItemModel>();
         int skippedCount = 0;
+        long skippedBytes = 0;
         long totalBytes = 0;
 
         await Task.Run(() =>
         {
-            var cacheDirs = ResolveCacheDirectories().ToList();
+            DateTime now = DateTime.UtcNow;
+            var cacheDirs = ResolveCacheDirectories(options.AllProfiles).ToList();
 
             foreach (var cacheDir in cacheDirs)
             {
@@ -120,12 +129,22 @@ public class BrowserCacheCleanerModule : CleanerModuleBase
                     if (ct.IsCancellationRequested) break;
 
                     long length = 0;
+                    DateTime lastWriteUtc = DateTime.MinValue;
                     try
                     {
                         length = file.Length;
+                        lastWriteUtc = file.LastWriteTimeUtc;
                     }
                     catch
                     {
+                        continue;
+                    }
+
+                    TimeSpan age = now - lastWriteUtc;
+                    if (age < options.AgeSafetyBuffer)
+                    {
+                        skippedCount++;
+                        skippedBytes += length;
                         continue;
                     }
 
@@ -159,9 +178,15 @@ public class BrowserCacheCleanerModule : CleanerModuleBase
             AddDiscoveredItem(item);
         }
 
+        SkippedSizeBytes = skippedBytes;
+        SkippedCount = skippedCount;
+        SkippedReasonSummary = skippedCount > 0
+            ? $"{skippedCount:N0} active cache files ({CleanItemModel.FormatBytes(skippedBytes)}) protected by 24h safety buffer."
+            : "All inspected browser cache files are older than 24h.";
+
         sw.Stop();
         IsScanning = false;
-        return new ModuleScanResult(Id, discovered, totalBytes, 0, skippedCount, sw.Elapsed);
+        return new ModuleScanResult(Id, discovered, totalBytes, skippedBytes, skippedCount, sw.Elapsed);
     }
 
     public override async Task<ModuleCleanResult> CleanAsync(
@@ -212,10 +237,13 @@ public class BrowserCacheCleanerModule : CleanerModuleBase
                     Name));
             }
 
-            foreach (var dir in ResolveCacheDirectories())
+            if (!options.DryRun)
             {
-                if (ct.IsCancellationRequested) break;
-                SafeDeleteEmptyDirectories(dir);
+                foreach (var dir in ResolveCacheDirectories(options.AllProfiles))
+                {
+                    if (ct.IsCancellationRequested) break;
+                    SafeDeleteEmptyDirectories(dir);
+                }
             }
         }, ct);
 

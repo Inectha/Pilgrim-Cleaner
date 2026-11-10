@@ -76,8 +76,8 @@
                 <Setter Property="Foreground" Value="#05101A" />
                 <Setter Property="FontFamily" Value="Segoe UI Variable Display, Segoe UI, sans-serif" />
                 <Setter Property="FontWeight" Value="Bold" />
-                <Setter Property="FontSize" Value="14" />
-                <Setter Property="Padding" Value="24,12" />
+                <Setter Property="FontSize" Value="15" />
+                <Setter Property="Padding" Value="26,13" />
                 <Setter Property="BorderThickness" Value="0" />
                 <Setter Property="Cursor" Value="Hand" />
                 <Setter Property="Template">
@@ -134,8 +134,8 @@
                 <Setter Property="Foreground" Value="#E2E8F0" />
                 <Setter Property="FontFamily" Value="Segoe UI Variable Text, Segoe UI, sans-serif" />
                 <Setter Property="FontWeight" Value="SemiBold" />
-                <Setter Property="FontSize" Value="12" />
-                <Setter Property="Padding" Value="12,6" />
+                <Setter Property="FontSize" Value="13.5" />
+                <Setter Property="Padding" Value="14,7" />
                 <Setter Property="Cursor" Value="Hand" />
                 <Setter Property="Template">
                     <Setter.Value>
@@ -168,8 +168,8 @@
                 <Setter Property="Foreground" Value="#94A3B8" />
                 <Setter Property="FontFamily" Value="Segoe UI Variable Text, Segoe UI, sans-serif" />
                 <Setter Property="FontWeight" Value="SemiBold" />
-                <Setter Property="FontSize" Value="13.5" />
-                <Setter Property="Height" Value="42" />
+                <Setter Property="FontSize" Value="14.5" />
+                <Setter Property="Height" Value="44" />
                 <Setter Property="Margin" Value="0,2,0,2" />
                 <Setter Property="Cursor" Value="Hand" />
                 <Setter Property="Template">
