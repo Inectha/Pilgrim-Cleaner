@@ -17,11 +17,6 @@ Commands:
   - pilgrim
 Installers:
   - Architecture: x64
-    Scope: user
-    InstallerUrl: https://github.com/Inectha/Pilgrim-Cleaner/releases/download/v1.1.0/PilgrimCleanerSetup.exe
-    InstallerSha256: CC5E30CAC8A874F6EDCE61FD204C2A3982496491833CAD6BF286A7DA9F7F3D8A
-  - Architecture: x64
-    Scope: machine
     InstallerUrl: https://github.com/Inectha/Pilgrim-Cleaner/releases/download/v1.1.0/PilgrimCleanerSetup.exe
     InstallerSha256: CC5E30CAC8A874F6EDCE61FD204C2A3982496491833CAD6BF286A7DA9F7F3D8A
 ManifestType: installer
