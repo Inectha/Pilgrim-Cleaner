@@ -29,23 +29,23 @@ I developed this utility using **[Google Antigravity](https://deepmind.google/te
 <!-- To add your own screenshots, place image files in a `docs/screenshots/` folder and link them here, or drag & drop images directly into GitHub issues/releases. -->
 
 <img width="1240" height="820" alt="image" src="https://github.com/user-attachments/assets/17147b33-d366-4677-9ac8-f75d5b3dc8c3" />
-
+<br><br>
 <img width="1240" height="820" alt="image" src="https://github.com/user-attachments/assets/5f0778c2-f8fc-4320-a79a-ea522e07c2b7" />
-
+<br><br>
 <img width="1240" height="820" alt="image" src="https://github.com/user-attachments/assets/69ddd250-b14f-466d-aa63-d6e712a9c87d" />
-
+<br><br>
 <img width="1240" height="820" alt="image" src="https://github.com/user-attachments/assets/5a7b140a-a96f-4f1a-8155-b3671fdc18c6" />
-
+<br><br>
 <img width="1240" height="820" alt="image" src="https://github.com/user-attachments/assets/9b83c255-3741-4b75-ad0d-756792c26dd5" />
-
+<br><br>
 <img width="1240" height="820" alt="image" src="https://github.com/user-attachments/assets/b1037804-135f-44a2-9b94-7fa37201ddd0" />
-
+<br><br>
 <img width="1240" height="820" alt="image" src="https://github.com/user-attachments/assets/5a1a9d75-8b76-45ac-82a4-95712ca8907b" />
-
+<br><br>
 <img width="1240" height="820" alt="image" src="https://github.com/user-attachments/assets/c3307e8a-a922-4254-ae9a-f041322f9f6b" />
-
+<br><br>
 <img width="1240" height="820" alt="image" src="https://github.com/user-attachments/assets/a1456d43-4ce7-424b-9f6f-91555b218ad4" />
-
+<br><br>
 <img width="1240" height="820" alt="image" src="https://github.com/user-attachments/assets/c0a648e3-64ee-426a-8e4c-70d37a4c0d17" />
 
 ---
