@@ -56,7 +56,7 @@
                     <TextBlock Text="Pilgrim" FontWeight="Bold" FontSize="16" Foreground="#FFFFFF" VerticalAlignment="Center" />
                     <TextBlock Text="Cleaner" FontWeight="Light" FontSize="16" Foreground="#00E5FF" Margin="5,0,0,0" VerticalAlignment="Center" />
                     <Border Background="#14263C" BorderBrush="#00E5FF" BorderThickness="1" CornerRadius="4" Padding="6,1.5" Margin="10,0,0,0" VerticalAlignment="Center">
-                        <TextBlock Text="v1.1" FontSize="13" FontWeight="Bold" Foreground="#00E5FF" />
+                        <TextBlock Text="{x:Static local:AppInfo.ShortVersion}" FontSize="13" FontWeight="Bold" Foreground="#00E5FF" />
                     </Border>
                 </StackPanel>
 
@@ -2738,7 +2738,7 @@
                                     <TextBlock Text="Windows Disk Cleaner, Application Uninstaller, Safe WHQL Driver Auditor &amp; Sysadmin CLI" FontSize="15" Foreground="#94A3B8" Margin="0,6,0,0" />
                                     <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
                                         <Border Background="#16273C" CornerRadius="4" Padding="8,4" Margin="0,0,8,0">
-                                            <TextBlock Text="Version 1.1.0" FontSize="14" FontWeight="Bold" Foreground="#00E5FF" />
+                                            <TextBlock Text="{x:Static local:AppInfo.VersionLabel}" FontSize="14" FontWeight="Bold" Foreground="#00E5FF" />
                                         </Border>
                                         <Border Background="#16273C" CornerRadius="4" Padding="8,4" Margin="0,0,8,0">
                                             <TextBlock Text=".NET 10.0 Windows x64" FontSize="14" FontWeight="Bold" Foreground="#94A3B8" />

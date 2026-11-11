@@ -164,7 +164,7 @@ public static class TerminalManual
         Console.WriteLine("       native Windows kernel sharing-violation checks, avoiding false-positive EDR blocks.");
         Console.WriteLine();
         Console.WriteLine("    2. AppLocker & Windows Defender Application Control (WDAC):");
-        Console.WriteLine("       When installed as Administrator (or via 'Install-PilgrimCleaner.ps1 -Machine'),");
+        Console.WriteLine("       The setup wizard (PilgrimCleanerSetup.exe) installs machine-wide, so the");
         Console.WriteLine("       binaries reside in 'C:\\Program Files\\Pilgrim Cleaner\\', satisfying default");
         Console.WriteLine("       AppLocker and WDAC Program Files path rules.");
         Console.WriteLine();

@@ -12,9 +12,6 @@
     <Product>Pilgrim Cleaner CLI</Product>
     <Company>Pilgrim Software</Company>
     <Description>Pilgrim Cleaner — Enterprise Windows &amp; Server Maintenance CLI for System Administrators</Description>
-    <Version>1.1.0</Version>
-    <AssemblyVersion>1.1.0.0</AssemblyVersion>
-    <FileVersion>1.1.0.0</FileVersion>
     <Copyright>Copyright (C) 2026 Pilgrim Software</Copyright>
   </PropertyGroup>
 
