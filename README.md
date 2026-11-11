@@ -7,6 +7,8 @@ An open-source, non-destructive Windows 10/11 & Windows Server maintenance utili
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Built With](https://img.shields.io/badge/Pair%20Programmed%20With-Google%20Antigravity-4285F4.svg)](https://deepmind.google/technologies/gemini/)
 
+[![Pilgrim Cleaner | AlternativeTo](https://alternativeto.net/static/badges/badge-compact-dark.svg)](https://alternativeto.net/software/pilgrim-cleaner/about/?utm_source=badge&utm_medium=referral)
+
 ---
 
 ## About This Project
