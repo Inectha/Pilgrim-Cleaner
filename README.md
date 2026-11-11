@@ -1,7 +1,7 @@
 # Pilgrim Cleaner
 An open-source, non-destructive Windows 10/11 & Windows Server maintenance utility and Sysadmin CLI built with C# and WPF.
 
-[![Framework](https://img.shields.io/badge/.NET-8.0%20WPF%20%2B%20CLI-512BD4.svg)](https://dotnet.microsoft.com/)
+[![Framework](https://img.shields.io/badge/.NET-10.0%20WPF%20%2B%20CLI-512BD4.svg)](https://dotnet.microsoft.com/)
 [![UI](https://img.shields.io/badge/UI-WPF--UI%20%28Fluent%202%20%2F%20Mica%29-0078D4.svg)](https://wpfui.lepo.co/)
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11%20%7C%20Windows%20Server-0078D4.svg)](https://www.microsoft.com/windows)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
@@ -145,7 +145,7 @@ pilgrim man automation
 
 ## Technical Stack & Architecture
 
-- **Runtime:** .NET 8.0 Desktop (`net8.0-windows`)
+- **Runtime:** .NET 10.0 Desktop (`net10.0-windows`)
 - **UI Framework:** Windows Presentation Foundation (WPF) with `WPF-UI 4.3.0`
 - **CLI Companion:** Native Console Subsystem (`pilgrim.exe`, `cli/PilgrimCli.csproj`) sharing the core module engine
 - **Design System:** Windows 11 Fluent Design 2 with Mica / Acrylic backdrop materials
@@ -176,7 +176,7 @@ See [**INSTALL.md**](INSTALL.md) for detailed workstation and Windows Server dep
 
 ### Prerequisites
 - Windows 10 (Version 1903+) or Windows 11
-- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- [.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 
 ### Clone & Build
 ```powershell

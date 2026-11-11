@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
@@ -18,7 +18,7 @@
     <FileVersion>1.1.0.0</FileVersion>
     <Copyright>Copyright (C) 2026 Pilgrim Software</Copyright>
     <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
-    <PackageTags>pilgrim-cleaner;windows-11;windows-server;sysadmin-cli;windows-cleaner;disk-cleaner;storage-optimizer;uninstaller;app-manager;driver-health;whql;duplicate-finder;space-lens;privacy-shield;task-scheduler;bleachbit-alternative;ccleaner-alternative;wpf;dotnet8;csharp;fluent-ui;mica;antigravity;pilgrim-software;open-source;system-utility</PackageTags>
+    <PackageTags>pilgrim-cleaner;windows-11;windows-server;sysadmin-cli;windows-cleaner;disk-cleaner;storage-optimizer;uninstaller;app-manager;driver-health;whql;duplicate-finder;space-lens;privacy-shield;task-scheduler;bleachbit-alternative;ccleaner-alternative;wpf;dotnet10;csharp;fluent-ui;mica;antigravity;pilgrim-software;open-source;system-utility</PackageTags>
     <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
