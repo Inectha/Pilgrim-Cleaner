@@ -322,6 +322,49 @@ public class Program
         process.WaitForExit(10000);
         if (!Directory.Exists(link) || (File.GetAttributes(link) & FileAttributes.ReparsePoint) == 0)
             throw new Exception($"Test setup failed: could not create junction '{link}'.");
+
+        // When the tests run elevated (e.g. on a GitHub runner) the junction is owned by the
+        // Administrators group, which Pilgrim deliberately trusts. Make the current user the owner,
+        // exactly like a junction created by a standard user.
+        SetOwnerToCurrentUser(link);
+    }
+
+    private static void SetOwnerToCurrentUser(string path)
+    {
+        using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+        var userSid = identity.User!;
+        byte[] sid = new byte[userSid.BinaryLength];
+        userSid.GetBinaryForm(sid, 0);
+
+        const uint WRITE_OWNER = 0x00080000;
+        const uint FILE_SHARE_ALL = 0x7;
+        const uint OPEN_EXISTING = 3;
+        const uint FILE_FLAG_BACKUP_SEMANTICS = 0x02000000;
+        const uint FILE_FLAG_OPEN_REPARSE_POINT = 0x00200000;
+
+        // Open the junction itself, not its target.
+        using var handle = TestNative.CreateFileW(@"\\?\" + Path.GetFullPath(path), WRITE_OWNER, FILE_SHARE_ALL, IntPtr.Zero,
+            OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, IntPtr.Zero);
+        if (handle.IsInvalid)
+            throw new Exception($"Test setup failed: cannot open junction to set owner (error {System.Runtime.InteropServices.Marshal.GetLastWin32Error()}).");
+
+        uint result = TestNative.SetSecurityInfo(handle, 1 /* SE_FILE_OBJECT */, 1 /* OWNER_SECURITY_INFORMATION */,
+            sid, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+        if (result != 0)
+            throw new Exception($"Test setup failed: cannot set junction owner (error {result}).");
+    }
+
+    private static class TestNative
+    {
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+        public static extern Microsoft.Win32.SafeHandles.SafeFileHandle CreateFileW(
+            string lpFileName, uint dwDesiredAccess, uint dwShareMode, IntPtr lpSecurityAttributes,
+            uint dwCreationDisposition, uint dwFlagsAndAttributes, IntPtr hTemplateFile);
+
+        [System.Runtime.InteropServices.DllImport("advapi32.dll")]
+        public static extern uint SetSecurityInfo(
+            Microsoft.Win32.SafeHandles.SafeFileHandle handle, int objectType, uint securityInfo,
+            byte[] psidOwner, IntPtr psidGroup, IntPtr pDacl, IntPtr pSacl);
     }
 
     private static void DeleteTestTree(string baseDir, string junction)
