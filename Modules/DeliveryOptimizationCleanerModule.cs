@@ -195,7 +195,7 @@ public class DeliveryOptimizationCleanerModule : CleanerModuleBase
                     Name));
             }
 
-            if (Directory.Exists(_downloadCachePath))
+            if (!options.DryRun && Directory.Exists(_downloadCachePath))
             {
                 SafeDeleteEmptyDirectories(_downloadCachePath);
             }

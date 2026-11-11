@@ -143,7 +143,7 @@ public class DismComponentCleanerModule : CleanerModuleBase
 
                 var psi = new ProcessStartInfo
                 {
-                    FileName = "dism.exe",
+                    FileName = SystemTools.Dism,
                     Arguments = "/Online /Cleanup-Image /StartComponentCleanup /Quiet /NoRestart",
                     UseShellExecute = false,
                     CreateNoWindow = true,
@@ -153,7 +153,7 @@ public class DismComponentCleanerModule : CleanerModuleBase
 
                 if (!NativeMethods.IsRunningAsAdministrator())
                 {
-                    psi.FileName = "powershell.exe";
+                    psi.FileName = SystemTools.PowerShell;
                     psi.Arguments = "-NoProfile -Command \"Start-Process dism.exe -ArgumentList '/Online /Cleanup-Image /StartComponentCleanup /Quiet /NoRestart' -Verb RunAs -Wait\"";
                 }
 

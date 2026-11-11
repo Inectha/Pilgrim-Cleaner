@@ -16,6 +16,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -56,18 +57,23 @@ public class Program
         Console.ResetColor();
 
         await RunTest("Native Methods: Query Recycle Bin", TestRecycleBinQuery);
+        await RunTest("Native Methods: Recycle Bin Struct Accepted By Windows", TestRecycleBinStructLayout);
         await RunTest("Native Methods: Elevation Detection", TestElevationCheck);
         await RunTest("Safety Policy: 24h Age Safety Buffer", TestAgeSafetyBuffer);
         await RunTest("Safety Policy: Resilient Locked File Deletion", TestLockedFileResilience);
+        await RunTest("Safety Policy: Junction Scan Root Is Refused", TestJunctionRootRefused);
+        await RunTest("Safety Policy: Post-Scan Junction Swap Cannot Redirect Delete", TestJunctionSwapAfterScan);
         await RunTest("Module C: Browser Non-Destructive Target Verification", TestBrowserNonDestructiveTargets);
         await RunTest("Engine Service: Throttled Progress Dispatching", TestThrottledProgress);
         await RunTest("Engine Service: Dry-Run Architecture", TestDryRunEngine);
         await RunTest("ViewModel: State Machine & Score Calculation", TestViewModelStateMachine);
         await RunTest("App Manager: Application Enumeration & Safety Exclusions", TestAppManagerEnumeration);
         await RunTest("App Manager: Post-Uninstall Residue Safety Guardrail", TestLeftoverSafetyGuardrails);
+        await RunTest("App Manager: Leftovers Ignore Live, Shared & Spoofed Folders", TestLeftoverSpoofingGuardrails);
         await RunTest("Driver Health: Device Classification & WHQL Verification", TestDriverHealthClassification);
         await RunTest("Driver Health: Native Windows Update Session Integration", TestWindowsUpdateDriverSession);
         await RunTest("Driver Health: Driver & WHQL Update Correlation", TestDriverUpdateCorrelation);
+        await RunTest("Driver Health: Install Script Is Injection-Safe & Parses", TestDriverInstallScriptSafety);
         await RunTest("Storage Module: Developer & Package Manager Caches", TestDeveloperCacheModule);
         await RunTest("Storage Module: Server & CBS Archived Logs (IIS / CBS)", TestServerLogsModule);
         await RunTest("Storage Module: Dism WinSxS Component Store", TestDismComponentModule);
@@ -75,6 +81,7 @@ public class Program
         await RunTest("Sysadmin Engine: Multi-Profile User Resolution", TestUserProfileResolver);
         await RunTest("Space Lens: Large & Ancient Files Library Discovery", TestSpaceLensScanner);
         await RunTest("Duplicates: Two-Tier Cryptographic SHA-256 Audit", TestDuplicatesFinder);
+        await RunTest("Duplicates: Overlapping Roots Never Make A File Its Own Copy", TestDuplicatesOverlappingRoots);
         await RunTest("Startup Accelerator: Non-Destructive StartupApproved", TestStartupAccelerator);
         await RunTest("System Telemetry: Hardware & Memory Integrity", TestTelemetryService);
         await RunTest("Privacy Shield: Footprint & Activity Trace Audit", TestPrivacyService);
@@ -124,6 +131,15 @@ public class Program
         Assert(success, "QueryRecycleBinTotal returned false.");
         Assert(bytes >= 0, $"Recycle bin bytes cannot be negative (got {bytes}).");
         Assert(items >= 0, $"Recycle bin items count cannot be negative (got {items}).");
+        return Task.CompletedTask;
+    }
+
+    private static Task TestRecycleBinStructLayout()
+    {
+        // With a wrong struct size Windows rejects the call (E_INVALIDARG) and the bin always looks empty.
+        var info = new NativeMethods.SHQUERYRBINFO { cbSize = System.Runtime.InteropServices.Marshal.SizeOf<NativeMethods.SHQUERYRBINFO>() };
+        int hr = NativeMethods.SHQueryRecycleBin(Path.GetPathRoot(Environment.SystemDirectory), ref info);
+        Assert(hr == 0, $"SHQueryRecycleBin rejected the struct (HRESULT 0x{hr:X8}, size {info.cbSize}).");
         return Task.CompletedTask;
     }
 
@@ -188,7 +204,8 @@ public class Program
             using var fileStream = new FileStream(lockedFile, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
 
             var module = new TestFolderCleanerModule(testDir);
-            module.ClearResults();
+            // Deletion is only allowed below folders verified by a scan.
+            await module.ScanAsync(new EngineOptions { AgeSafetyBuffer = TimeSpan.Zero }, new Progress<ScanProgressReport>(), CancellationToken.None);
 
             var item = new CleanItemModel
             {
@@ -219,6 +236,148 @@ public class Program
                 try { Directory.Delete(testDir, true); } catch { }
             }
         }
+    }
+
+    private static async Task TestJunctionRootRefused()
+    {
+        // A standard user points a cache folder (a scan root) at someone else's data.
+        string baseDir = Path.Combine(Path.GetTempPath(), "PilgrimTest_JunctionRoot_" + Guid.NewGuid().ToString("N"));
+        string victimDir = Path.Combine(baseDir, "victim");
+        string junctionRoot = Path.Combine(baseDir, "cache");
+        Directory.CreateDirectory(victimDir);
+
+        try
+        {
+            string victimFile = Path.Combine(victimDir, "important.docx");
+            await File.WriteAllTextAsync(victimFile, "someone else's document");
+            File.SetLastWriteTimeUtc(victimFile, DateTime.UtcNow.AddDays(-3));
+            CreateJunction(junctionRoot, victimDir);
+
+            var module = new TestFolderCleanerModule(junctionRoot);
+            var scan = await module.ScanAsync(new EngineOptions { AgeSafetyBuffer = TimeSpan.FromHours(24) }, new Progress<ScanProgressReport>(), CancellationToken.None);
+            Assert(scan.Items.Count == 0, $"A user-created junction root must not be scanned, got {scan.Items.Count} items.");
+
+            await module.CleanAsync(new EngineOptions { DryRun = false }, new Progress<CleanProgressReport>(), CancellationToken.None);
+            Assert(File.Exists(victimFile), "File behind a junction root must never be deleted.");
+        }
+        finally
+        {
+            DeleteTestTree(baseDir, junctionRoot);
+        }
+    }
+
+    private static async Task TestJunctionSwapAfterScan()
+    {
+        // After the scan, a scanned subfolder is replaced by a junction to another folder
+        // that contains a file with the same name (time-of-check/time-of-use attack).
+        string baseDir = Path.Combine(Path.GetTempPath(), "PilgrimTest_JunctionSwap_" + Guid.NewGuid().ToString("N"));
+        string root = Path.Combine(baseDir, "root");
+        string sub = Path.Combine(root, "sub");
+        string victimDir = Path.Combine(baseDir, "victim");
+        Directory.CreateDirectory(sub);
+        Directory.CreateDirectory(victimDir);
+
+        try
+        {
+            DateTime old = DateTime.UtcNow.AddDays(-3);
+            string scannedFile = Path.Combine(sub, "old.log");
+            string plainFile = Path.Combine(root, "plain.log");
+            string victimFile = Path.Combine(victimDir, "old.log");
+            await File.WriteAllTextAsync(scannedFile, "temp");
+            await File.WriteAllTextAsync(plainFile, "temp");
+            await File.WriteAllTextAsync(victimFile, "someone else's file");
+            File.SetLastWriteTimeUtc(scannedFile, old);
+            File.SetLastWriteTimeUtc(plainFile, old);
+            File.SetLastWriteTimeUtc(victimFile, old);
+            File.SetAttributes(plainFile, FileAttributes.ReadOnly); // read-only temp files must still be removed
+
+            var module = new TestFolderCleanerModule(root);
+            var scan = await module.ScanAsync(new EngineOptions { AgeSafetyBuffer = TimeSpan.FromHours(24) }, new Progress<ScanProgressReport>(), CancellationToken.None);
+            Assert(scan.Items.Count == 2, $"Expected 2 scanned files, got {scan.Items.Count}.");
+
+            Directory.Move(sub, sub + "_moved");
+            CreateJunction(sub, victimDir);
+
+            await module.CleanAsync(new EngineOptions { DryRun = false }, new Progress<CleanProgressReport>(), CancellationToken.None);
+            Assert(File.Exists(victimFile), "Delete must not follow a junction swapped in after the scan.");
+            Assert(!File.Exists(plainFile), "A normal (read-only) file inside the verified root should still be deleted.");
+        }
+        finally
+        {
+            DeleteTestTree(baseDir, sub);
+        }
+    }
+
+    private static void CreateJunction(string link, string target)
+    {
+        // mklink /J needs no administrator rights, which is exactly why this attack matters.
+        var psi = new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, "cmd.exe"), $"/c mklink /J \"{link}\" \"{target}\"")
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+        using var process = Process.Start(psi)!;
+        process.WaitForExit(10000);
+        if (!Directory.Exists(link) || (File.GetAttributes(link) & FileAttributes.ReparsePoint) == 0)
+            throw new Exception($"Test setup failed: could not create junction '{link}'.");
+
+        // When the tests run elevated (e.g. on a GitHub runner) the junction is owned by the
+        // Administrators group, which Pilgrim deliberately trusts. Make the current user the owner,
+        // exactly like a junction created by a standard user.
+        SetOwnerToCurrentUser(link);
+    }
+
+    private static void SetOwnerToCurrentUser(string path)
+    {
+        using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+        var userSid = identity.User!;
+        byte[] sid = new byte[userSid.BinaryLength];
+        userSid.GetBinaryForm(sid, 0);
+
+        const uint WRITE_OWNER = 0x00080000;
+        const uint FILE_SHARE_ALL = 0x7;
+        const uint OPEN_EXISTING = 3;
+        const uint FILE_FLAG_BACKUP_SEMANTICS = 0x02000000;
+        const uint FILE_FLAG_OPEN_REPARSE_POINT = 0x00200000;
+
+        // Open the junction itself, not its target.
+        using var handle = TestNative.CreateFileW(@"\\?\" + Path.GetFullPath(path), WRITE_OWNER, FILE_SHARE_ALL, IntPtr.Zero,
+            OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, IntPtr.Zero);
+        if (handle.IsInvalid)
+            throw new Exception($"Test setup failed: cannot open junction to set owner (error {System.Runtime.InteropServices.Marshal.GetLastWin32Error()}).");
+
+        uint result = TestNative.SetSecurityInfo(handle, 1 /* SE_FILE_OBJECT */, 1 /* OWNER_SECURITY_INFORMATION */,
+            sid, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+        if (result != 0)
+            throw new Exception($"Test setup failed: cannot set junction owner (error {result}).");
+    }
+
+    private static class TestNative
+    {
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+        public static extern Microsoft.Win32.SafeHandles.SafeFileHandle CreateFileW(
+            string lpFileName, uint dwDesiredAccess, uint dwShareMode, IntPtr lpSecurityAttributes,
+            uint dwCreationDisposition, uint dwFlagsAndAttributes, IntPtr hTemplateFile);
+
+        [System.Runtime.InteropServices.DllImport("advapi32.dll")]
+        public static extern uint SetSecurityInfo(
+            Microsoft.Win32.SafeHandles.SafeFileHandle handle, int objectType, uint securityInfo,
+            byte[] psidOwner, IntPtr psidGroup, IntPtr pDacl, IntPtr pSacl);
+    }
+
+    private static void DeleteTestTree(string baseDir, string junction)
+    {
+        // Remove the junction itself first so cleanup can never touch its target.
+        try { if (Directory.Exists(junction)) Directory.Delete(junction, false); } catch { }
+        try
+        {
+            foreach (var file in Directory.EnumerateFiles(baseDir, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, FileAttributes.Normal);
+            Directory.Delete(baseDir, true);
+        }
+        catch { }
     }
 
     private static Task TestBrowserNonDestructiveTargets()
@@ -374,6 +533,67 @@ public class Program
         }
     }
 
+    private static async Task TestLeftoverSpoofingGuardrails()
+    {
+        var appService = new AppManagerService();
+        string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        string programData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+        string id = Guid.NewGuid().ToString("N")[..8];
+
+        string liveName = "PilgrimTest_Live_" + id;
+        string liveDir = Path.Combine(localAppData, liveName);
+        string sharedDir = Path.Combine(programData, "PilgrimTest_Shared_" + id);
+
+        try
+        {
+            Directory.CreateDirectory(liveDir);
+            Directory.CreateDirectory(sharedDir);
+
+            // 1. App is still registered (e.g. the uninstaller was cancelled): nothing may be pre-selected.
+            var liveApp = new AppItemModel
+            {
+                DisplayName = liveName,
+                InstallLocation = liveDir,
+                RegistryHive = Microsoft.Win32.RegistryHive.CurrentUser,
+                RegistryKeyPath = @"SOFTWARE\Microsoft\Windows\CurrentVersion" // exists, so "still registered"
+            };
+            var liveLeftovers = await appService.ScanLeftoversAsync(liveApp);
+            Assert(liveLeftovers.All(l => !l.IsSelected), "Folders of a still-installed app must never be pre-selected.");
+            await appService.DeleteLeftoversAsync(liveLeftovers);
+            Assert(Directory.Exists(liveDir), "Purging with default selection must not delete a still-installed app.");
+
+            // 2. Registry values with path tricks must not produce candidates.
+            var escapeApp = new AppItemModel { DisplayName = @"..\..\PilgrimTest_Escape" };
+            Assert((await appService.ScanLeftoversAsync(escapeApp)).Count == 0, "A DisplayName with '..' must be ignored.");
+
+            var sharedNameApp = new AppItemModel { DisplayName = "Microsoft" };
+            Assert((await appService.ScanLeftoversAsync(sharedNameApp)).Count == 0, "Shared folder names must be ignored.");
+
+            // 3. A per-user (HKCU) entry may not point its install folder at machine-wide data.
+            var perUserApp = new AppItemModel
+            {
+                DisplayName = "PilgrimTest_PerUser_" + id,
+                InstallLocation = sharedDir,
+                IsPerUserEntry = true
+            };
+            var perUserLeftovers = await appService.ScanLeftoversAsync(perUserApp);
+            Assert(perUserLeftovers.All(l => !l.FolderPath.Equals(sharedDir, StringComparison.OrdinalIgnoreCase)),
+                "A per-user entry must not be able to target a ProgramData folder.");
+
+            // 4. Shared install folders are never offered, even for per-machine entries.
+            string commonFiles = Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles);
+            var commonApp = new AppItemModel { DisplayName = "PilgrimTest_Common_" + id, InstallLocation = commonFiles };
+            var commonLeftovers = await appService.ScanLeftoversAsync(commonApp);
+            Assert(commonLeftovers.All(l => !l.FolderPath.Equals(commonFiles, StringComparison.OrdinalIgnoreCase)),
+                "'Common Files' must never be offered as a leftover.");
+        }
+        finally
+        {
+            try { Directory.Delete(liveDir, true); } catch { }
+            try { Directory.Delete(sharedDir, true); } catch { }
+        }
+    }
+
     private static async Task TestDriverHealthClassification()
     {
         var driverService = new DriverHealthService();
@@ -432,6 +652,38 @@ public class Program
         Assert(!sata.HasPendingUpdate, "SATA driver without pending update should not be flagged.");
         Assert(sata.IsUpToDate, "SATA driver should be marked as up to date.");
 
+        return Task.CompletedTask;
+    }
+
+    private static Task TestDriverInstallScriptSafety()
+    {
+        // A crafted update title (from Windows Update / WSUS) trying to break out with straight,
+        // typographic and double quotes plus a subexpression.
+        string hostileTitle = "Intel ' ‘ ’ \" ; $(New-Item C:\\pwned) ; Driver";
+        string script = DriverHealthService.BuildDriverInstallScript(hostileTitle);
+        Assert(!script.Contains("pwned"), "The update title must never appear in the script as code.");
+
+        // Let PowerShell parse (not run) the script and report syntax errors.
+        string scriptFile = Path.Combine(Path.GetTempPath(), "PilgrimTest_DriverScript_" + Guid.NewGuid().ToString("N") + ".ps1");
+        File.WriteAllText(scriptFile, script);
+        try
+        {
+            var psi = new ProcessStartInfo(SystemTools.PowerShell,
+                $"-NoProfile -NonInteractive -Command \"$e=$null; [void][System.Management.Automation.Language.Parser]::ParseFile('{scriptFile}',[ref]$null,[ref]$e); exit $e.Count\"")
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+            using var process = Process.Start(psi)!;
+            process.WaitForExit(30000);
+            Assert(process.ExitCode == 0, $"Driver install script has {process.ExitCode} PowerShell syntax error(s).");
+        }
+        finally
+        {
+            try { File.Delete(scriptFile); } catch { }
+        }
         return Task.CompletedTask;
     }
 
@@ -569,6 +821,43 @@ public class Program
         finally
         {
             try { Directory.Delete(testDir, true); } catch { }
+        }
+    }
+
+    private static async Task TestDuplicatesOverlappingRoots()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "PilgrimTest_DupOverlap_" + Guid.NewGuid().ToString("N"));
+        string photos = Path.Combine(root, "Photos");
+        Directory.CreateDirectory(photos);
+
+        try
+        {
+            var unique = new byte[4096];
+            new Random(42).NextBytes(unique);
+            string onlyCopy = Path.Combine(photos, "holiday.jpg");
+            await File.WriteAllBytesAsync(onlyCopy, unique);
+
+            var service = new DuplicatesService();
+
+            // Same folder reached via three overlapping roots (like Pictures redirected into Documents).
+            var groups = await service.FindDuplicatesAsync([root, photos, root + "\\"], null, CancellationToken.None);
+            Assert(groups.Count == 0, $"A single file must not be reported as its own duplicate, got {groups.Count} group(s).");
+
+            // A real duplicate is still found, with two different paths.
+            string realCopy = Path.Combine(root, "holiday (1).jpg");
+            await File.WriteAllBytesAsync(realCopy, unique);
+            groups = await service.FindDuplicatesAsync([root, photos], null, CancellationToken.None);
+            Assert(groups.Count == 1 && groups[0].Copies.Count == 2, "Expected exactly one group with two copies.");
+            Assert(groups[0].Copies.Select(c => c.FullPath).Distinct(StringComparer.OrdinalIgnoreCase).Count() == 2,
+                "Copies in a group must be different files.");
+
+            // The recycle helper refuses to remove a file "in favour of" itself.
+            Assert(!service.RecycleDuplicate(onlyCopy, onlyCopy), "RecycleDuplicate must refuse when copy and kept file are the same.");
+            Assert(File.Exists(onlyCopy), "The only copy must still exist.");
+        }
+        finally
+        {
+            try { Directory.Delete(root, true); } catch { }
         }
     }
 

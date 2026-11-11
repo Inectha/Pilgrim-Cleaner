@@ -38,7 +38,12 @@ public class DuplicatesService : IDuplicatesService
             var filesBySize = new Dictionary<long, List<FileInfo>>();
             int filesScanned = 0;
 
-            foreach (var root in rootPaths)
+            // The same file must never be counted twice: with overlapping roots (e.g. "D:\Data" and
+            // "D:\Data\Photos", or Pictures redirected into Documents) a file would otherwise become a
+            // "duplicate" of itself and its only copy would be recycled.
+            var seenFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var root in NormalizeRoots(rootPaths))
             {
                 ct.ThrowIfCancellationRequested();
                 if (!Directory.Exists(root)) continue;
@@ -78,7 +83,7 @@ public class DuplicatesService : IDuplicatesService
                             ct.ThrowIfCancellationRequested();
                             try
                             {
-                                if (file.Length > 1024) // Focus on files > 1 KB
+                                if (file.Length > 1024 && seenFiles.Add(file.FullName)) // Focus on files > 1 KB, each path once
                                 {
                                     if (!filesBySize.TryGetValue(file.Length, out var list))
                                     {
@@ -196,6 +201,38 @@ public class DuplicatesService : IDuplicatesService
         }, ct);
     }
 
+    /// <summary>
+    /// Returns full, de-duplicated root paths with nested roots removed
+    /// ("D:\Data" and "D:\Data\Photos" -> "D:\Data").
+    /// </summary>
+    public static List<string> NormalizeRoots(IEnumerable<string> rootPaths)
+    {
+        var normalized = new List<string>();
+        foreach (var root in rootPaths)
+        {
+            if (string.IsNullOrWhiteSpace(root)) continue;
+            try
+            {
+                normalized.Add(Path.TrimEndingDirectorySeparator(Path.GetFullPath(root)));
+            }
+            catch
+            {
+                // Ignore invalid paths
+            }
+        }
+
+        var result = new List<string>();
+        foreach (var root in normalized.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(r => r.Length))
+        {
+            bool nested = result.Any(parent =>
+                root.StartsWith(Path.EndsInDirectorySeparator(parent) ? parent : parent + Path.DirectorySeparatorChar,
+                    StringComparison.OrdinalIgnoreCase));
+            if (!nested)
+                result.Add(root);
+        }
+        return result;
+    }
+
     private static string ComputeHeaderHash(FileInfo fi, SHA256 sha256)
     {
         using var stream = new FileStream(fi.FullName, FileMode.Open, FileAccess.Read, FileShare.Read);
@@ -205,8 +242,32 @@ public class DuplicatesService : IDuplicatesService
         return Convert.ToHexString(hash);
     }
 
-    public bool DeleteFileToRecycleBin(string path)
+    public bool DeleteFileToRecycleBin(string path, bool interactive = false)
     {
-        return NativeMethods.SendToRecycleBin(path);
+        return NativeMethods.SendToRecycleBin(path, warnIfPermanent: interactive);
+    }
+
+    public bool RecycleDuplicate(string copyPath, string keptPath, bool interactive = false)
+    {
+        // Last line of defence: only remove a copy when the file we keep is a different,
+        // existing file of the same size.
+        try
+        {
+            string copy = Path.GetFullPath(copyPath);
+            string kept = Path.GetFullPath(keptPath);
+            if (string.Equals(copy, kept, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            var keptInfo = new FileInfo(kept);
+            var copyInfo = new FileInfo(copy);
+            if (!keptInfo.Exists || !copyInfo.Exists || keptInfo.Length != copyInfo.Length)
+                return false;
+        }
+        catch
+        {
+            return false;
+        }
+
+        return DeleteFileToRecycleBin(copyPath, interactive);
     }
 }

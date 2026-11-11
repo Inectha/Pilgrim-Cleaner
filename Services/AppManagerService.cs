@@ -25,6 +25,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Win32;
+using LuminaCleaner.Interop;
 using LuminaCleaner.Models;
 
 namespace LuminaCleaner.Services;
@@ -39,6 +40,22 @@ public class AppManagerService : IAppManagerService
         "Windows Security",
         "Internet Explorer"
     };
+
+    // Folder names that are shared by many programs or hold Windows/user data.
+    // They are never offered as "leftovers", whatever an uninstall entry claims.
+    private static readonly HashSet<string> SharedFolderNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Microsoft", "Microsoft Corporation", "Microsoft Office", "Windows", "WindowsApps",
+        "ModifiableWindowsApps", "Common Files", "Internet Explorer", "Packages", "Programs",
+        "Temp", "Package Cache", "Application Data", "dotnet", "PowerShell", "Reference Assemblies",
+        "MSBuild", "Google", "Mozilla", "Desktop", "Documents", "Downloads", "Local", "LocalLow", "Roaming"
+    };
+
+    // Exit codes that mean "uninstalled": success, and MSI success with (initiated) reboot.
+    private static readonly HashSet<int> SuccessExitCodes = [0, 3010, 1641];
+
+    // Inventory from the last scan, used to avoid deleting folders that other installed apps still use.
+    private List<AppItemModel> _lastInventory = [];
 
     public async Task<List<AppItemModel>> GetInstalledApplicationsAsync(CancellationToken ct = default)
     {
@@ -58,9 +75,11 @@ public class AppManagerService : IAppManagerService
             // 4. Enumerate Packaged Windows Store Apps
             ScanPackagedWindowsApps(apps);
 
-            return apps.Values
+            var inventory = apps.Values
                 .OrderBy(a => a.DisplayName)
                 .ToList();
+            _lastInventory = inventory;
+            return inventory;
         }, ct);
     }
 
@@ -135,7 +154,11 @@ public class AppManagerService : IAppManagerService
                             QuietUninstallString = quietUninstallString,
                             InstallLocation = installLocation,
                             IsPackagedApp = false,
-                            Category = "Win32 Desktop"
+                            Category = "Win32 Desktop",
+                            IsPerUserEntry = hive == RegistryHive.CurrentUser,
+                            RegistryHive = hive,
+                            RegistryView = view,
+                            RegistryKeyPath = $@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{subKeyName}"
                         };
                     }
                 }
@@ -157,7 +180,7 @@ public class AppManagerService : IAppManagerService
         {
             var psi = new ProcessStartInfo
             {
-                FileName = "powershell.exe",
+                FileName = SystemTools.PowerShell,
                 Arguments = "-NoProfile -NonInteractive -Command \"Get-AppxPackage -ErrorAction SilentlyContinue | Where-Object { -not $_.IsFramework -and -not $_.NonRemovable } | Select-Object Name, Publisher, Version, InstallLocation, PackageFullName | ConvertTo-Json -Compress\"",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
@@ -251,18 +274,38 @@ public class AppManagerService : IAppManagerService
 
                 if (app.IsPackagedApp && !string.IsNullOrWhiteSpace(app.PackageFullName))
                 {
+                    // Store apps are removed per user and need no elevation. Running this "as administrator"
+                    // would remove the package for the admin account instead of the signed-in user.
                     var psi = new ProcessStartInfo
                     {
-                        FileName = "powershell.exe",
-                        Arguments = $"-NoProfile -Command \"Remove-AppxPackage -Package '{app.PackageFullName}'\"",
-                        UseShellExecute = true,
-                        Verb = "runas"
+                        FileName = SystemTools.PowerShell,
+                        Arguments = $"-NoProfile -NonInteractive -Command \"Remove-AppxPackage -Package '{app.PackageFullName}'\"",
+                        UseShellExecute = false,
+                        CreateNoWindow = true
                     };
 
                     using var proc = Process.Start(psi);
-                    proc?.WaitForExit();
+                    if (proc == null)
+                    {
+                        app.Status = "Failed: could not start PowerShell";
+                        return false;
+                    }
+                    proc.WaitForExit();
+                    if (proc.ExitCode != 0)
+                    {
+                        app.Status = $"Failed: Remove-AppxPackage exited with code {proc.ExitCode}";
+                        return false;
+                    }
                     app.Status = "Uninstalled";
                     return true;
+                }
+
+                if (app.IsPerUserEntry && NativeMethods.IsRunningAsAdministrator())
+                {
+                    // HKCU uninstall commands can be written by any program the user runs. Starting one from an
+                    // elevated Pilgrim Cleaner would hand that program administrator rights without a UAC prompt.
+                    app.Status = "Skipped: per-user app. Uninstall it from a non-elevated Pilgrim Cleaner or Windows Settings.";
+                    return false;
                 }
 
                 string targetCommand = quiet && !string.IsNullOrWhiteSpace(app.QuietUninstallString)
@@ -329,14 +372,43 @@ public class AppManagerService : IAppManagerService
                     FileName = fileName,
                     Arguments = arguments,
                     UseShellExecute = true,
-                    Verb = "runas"
+                    // Per-machine (HKLM) entries can only be written by administrators, so they may elevate.
+                    // Per-user (HKCU) entries run as the user, like Windows Settings does.
+                    Verb = app.IsPerUserEntry ? string.Empty : "runas"
                 };
 
                 using var uninstallerProcess = Process.Start(procInfo);
-                uninstallerProcess?.WaitForExit();
+                if (uninstallerProcess == null)
+                {
+                    app.Status = "Failed: uninstaller did not start";
+                    return false;
+                }
+                uninstallerProcess.WaitForExit();
+
+                int exitCode = uninstallerProcess.ExitCode;
+                if (!SuccessExitCodes.Contains(exitCode))
+                {
+                    app.Status = exitCode is 1602 or 1223
+                        ? "Cancelled by user"
+                        : $"Failed: uninstaller exited with code {exitCode}";
+                    return false;
+                }
+
+                // Some uninstallers hand off to a copy of themselves and exit immediately. Only report success
+                // once the uninstall entry is really gone, so leftovers are never offered for a live install.
+                if (!WaitUntilUnregistered(app, TimeSpan.FromSeconds(10)))
+                {
+                    app.Status = "Uninstaller finished, but the app is still registered (it may still be running).";
+                    return false;
+                }
 
                 app.Status = "Uninstalled";
                 return true;
+            }
+            catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
+            {
+                app.Status = "Cancelled: administrator prompt was declined";
+                return false;
             }
             catch (Exception ex)
             {
@@ -355,7 +427,11 @@ public class AppManagerService : IAppManagerService
         return await Task.Run(() =>
         {
             var leftovers = new List<LeftoverFolderModel>();
-            if (string.IsNullOrWhiteSpace(app.DisplayName)) return leftovers;
+
+            // DisplayName and Publisher come from the registry (HKCU is writable by any user program).
+            // Only plain folder names are used, so values like "..\..\Windows" or "C:\Data" cannot
+            // steer the candidate paths.
+            if (!IsSafeFolderName(app.DisplayName)) return leftovers;
 
             string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
@@ -368,21 +444,31 @@ public class AppManagerService : IAppManagerService
                 Path.Combine(programData, app.DisplayName)
             };
 
-            if (!string.IsNullOrWhiteSpace(app.Publisher) && !app.Publisher.StartsWith("Unknown", StringComparison.OrdinalIgnoreCase))
+            // Microsoft's own folders hold Windows data (credentials, DPAPI keys, ...); never look inside them.
+            if (IsSafeFolderName(app.Publisher) &&
+                !app.Publisher.StartsWith("Unknown", StringComparison.OrdinalIgnoreCase) &&
+                !app.Publisher.StartsWith("Microsoft", StringComparison.OrdinalIgnoreCase))
             {
                 candidatePaths.Add(Path.Combine(localAppData, app.Publisher, app.DisplayName));
                 candidatePaths.Add(Path.Combine(appData, app.Publisher, app.DisplayName));
                 candidatePaths.Add(Path.Combine(programData, app.Publisher, app.DisplayName));
             }
 
-            if (!string.IsNullOrWhiteSpace(app.InstallLocation) && Directory.Exists(app.InstallLocation))
+            bool stillRegistered = IsStillRegistered(app);
+
+            // The install folder is only a leftover once the app is really gone. Store apps are managed by Windows,
+            // and per-user entries may only point inside the user's own AppData, not at machine-wide folders.
+            if (!stillRegistered && !app.IsPackagedApp &&
+                !string.IsNullOrWhiteSpace(app.InstallLocation) && Directory.Exists(app.InstallLocation) &&
+                (!app.IsPerUserEntry || IsInsideUserAppData(app.InstallLocation)))
             {
                 candidatePaths.Add(app.InstallLocation);
             }
 
             foreach (var path in candidatePaths.Distinct(StringComparer.OrdinalIgnoreCase))
             {
-                if (IsPathSafeForLeftoverTarget(path) && Directory.Exists(path))
+                if (IsPathSafeForLeftoverTarget(path) && Directory.Exists(path) &&
+                    !SafeFileOps.IsReparsePoint(path) && !IsUsedByAnotherInstalledApp(path, app))
                 {
                     long size = CalculateDirectorySize(path, 10);
                     int fileCount = CountDirectoryFiles(path);
@@ -393,7 +479,8 @@ public class AppManagerService : IAppManagerService
                         SizeBytes = size,
                         FormattedSize = FormatBytes(size),
                         FileCount = fileCount,
-                        IsSelected = true,
+                        // Never pre-select anything while the app is still installed: these folders are live data.
+                        IsSelected = !stillRegistered,
                         TargetCategory = GetFolderCategoryName(path)
                     });
                 }
@@ -411,7 +498,7 @@ public class AppManagerService : IAppManagerService
 
             foreach (var item in leftovers.Where(l => l.IsSelected))
             {
-                if (!IsPathSafeForLeftoverTarget(item.FolderPath)) continue;
+                if (!IsPathSafeForLeftoverTarget(item.FolderPath) || SafeFileOps.IsReparsePoint(item.FolderPath)) continue;
 
                 try
                 {
@@ -454,12 +541,97 @@ public class AppManagerService : IAppManagerService
             return false;
         }
 
-        // Must be a child directory of AppData, LocalAppData, ProgramData, or Program Files
-        return normalized.StartsWith(localAppData + "\\", StringComparison.OrdinalIgnoreCase) ||
-               normalized.StartsWith(appData + "\\", StringComparison.OrdinalIgnoreCase) ||
-               normalized.StartsWith(programData + "\\", StringComparison.OrdinalIgnoreCase) ||
-               normalized.StartsWith(programFiles + "\\", StringComparison.OrdinalIgnoreCase) ||
-               normalized.StartsWith(programFilesX86 + "\\", StringComparison.OrdinalIgnoreCase);
+        // Must be a child directory of AppData, LocalAppData, ProgramData, or Program Files,
+        // and the first folder below that root must not be a shared one (Common Files, Microsoft, ...).
+        foreach (var root in new[] { localAppData, appData, programData, programFiles, programFilesX86 })
+        {
+            if (string.IsNullOrEmpty(root) || !normalized.StartsWith(root + "\\", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            string firstFolder = normalized[(root.Length + 1)..].Split('\\')[0];
+            return !SharedFolderNames.Contains(firstFolder) &&
+                   !firstFolder.StartsWith("Windows", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return false;
+    }
+
+    private static bool IsSafeFolderName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return false;
+        string trimmed = name.Trim();
+        return trimmed == name &&
+               trimmed is not "." and not ".." &&
+               trimmed.IndexOfAny(Path.GetInvalidFileNameChars()) < 0 &&
+               !SharedFolderNames.Contains(trimmed);
+    }
+
+    private static bool IsInsideUserAppData(string path)
+    {
+        try
+        {
+            string normalized = Path.GetFullPath(path).TrimEnd('\\');
+            string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData).TrimEnd('\\');
+            string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData).TrimEnd('\\');
+            return normalized.StartsWith(localAppData + "\\", StringComparison.OrdinalIgnoreCase) ||
+                   normalized.StartsWith(appData + "\\", StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private bool IsUsedByAnotherInstalledApp(string path, AppItemModel app)
+    {
+        string normalized;
+        try { normalized = Path.GetFullPath(path).TrimEnd('\\'); } catch { return true; }
+
+        foreach (var other in _lastInventory)
+        {
+            if (ReferenceEquals(other, app) || string.IsNullOrWhiteSpace(other.InstallLocation)) continue;
+            if (other.DisplayName == app.DisplayName && other.DisplayVersion == app.DisplayVersion) continue;
+
+            string otherLocation;
+            try { otherLocation = Path.GetFullPath(other.InstallLocation).TrimEnd('\\'); } catch { continue; }
+
+            // Same folder, or one contains the other (e.g. several Office components share one folder).
+            if (otherLocation.Equals(normalized, StringComparison.OrdinalIgnoreCase) ||
+                otherLocation.StartsWith(normalized + "\\", StringComparison.OrdinalIgnoreCase) ||
+                normalized.StartsWith(otherLocation + "\\", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static bool IsStillRegistered(AppItemModel app)
+    {
+        if (app.RegistryHive is not { } hive || string.IsNullOrWhiteSpace(app.RegistryKeyPath))
+            return false; // no registry entry to check (Store apps, or entries created in tests)
+
+        try
+        {
+            using var baseKey = RegistryKey.OpenBaseKey(hive, app.RegistryView);
+            using var key = baseKey.OpenSubKey(app.RegistryKeyPath);
+            return key != null;
+        }
+        catch
+        {
+            return true; // cannot verify: assume it is still installed
+        }
+    }
+
+    private static bool WaitUntilUnregistered(AppItemModel app, TimeSpan timeout)
+    {
+        var sw = Stopwatch.StartNew();
+        while (IsStillRegistered(app))
+        {
+            if (sw.Elapsed >= timeout) return false;
+            Thread.Sleep(500);
+        }
+        return true;
     }
 
     private static string GetFolderCategoryName(string path)

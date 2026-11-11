@@ -256,7 +256,7 @@ public class SystemTelemetryService : ISystemTelemetryService
         {
             var searcher = new ProcessStartInfo
             {
-                FileName = "powershell.exe",
+                FileName = SystemTools.PowerShell,
                 Arguments = "-NoProfile -Command \"Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue | Select-Object EstimatedChargeRemaining, BatteryStatus, DesignCapacity, FullChargeCapacity | ConvertTo-Json\"",
                 UseShellExecute = false,
                 CreateNoWindow = true,
