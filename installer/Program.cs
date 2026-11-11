@@ -202,8 +202,8 @@ rd ""%PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs\Pilgrim Cleaner"" >nul 
 del ""%APPDATA%\Microsoft\Windows\Start Menu\Programs\Pilgrim Cleaner\Pilgrim Cleaner.lnk"" >nul 2>&1
 rd ""%APPDATA%\Microsoft\Windows\Start Menu\Programs\Pilgrim Cleaner"" >nul 2>&1
 del ""%USERPROFILE%\Desktop\Pilgrim Cleaner.lnk"" >nul 2>&1
-cd ""%TEMP%""
-start /b """" cmd /c ""timeout /t 2 /nobreak >nul & rd /s /q """"{targetDir}""""""
+cd /d ""%TEMP%""
+start """" /b cmd /c ""timeout /t 2 /nobreak >nul & rd /s /q ""{targetDir}""""
 exit /b 0";
             File.WriteAllText(uninstallBatch, script);
 

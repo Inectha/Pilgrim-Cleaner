@@ -17,6 +17,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using LuminaCleaner.Interop;
 using LuminaCleaner.Models;
 
 namespace LuminaCleaner.Services;
@@ -31,7 +32,7 @@ public class SchedulerService : ISchedulerService
         {
             var psi = new ProcessStartInfo
             {
-                FileName = "schtasks.exe",
+                FileName = SystemTools.Schtasks,
                 Arguments = $"/delete /tn \"{LegacyTaskName}\" /f",
                 UseShellExecute = false,
                 CreateNoWindow = true,
@@ -51,7 +52,7 @@ public class SchedulerService : ISchedulerService
             RemoveLegacyTaskIfPresent();
             var psi = new ProcessStartInfo
             {
-                FileName = "schtasks.exe",
+                FileName = SystemTools.Schtasks,
                 Arguments = $"/query /tn \"{taskName}\"",
                 UseShellExecute = false,
                 CreateNoWindow = true,
@@ -101,7 +102,7 @@ public class SchedulerService : ISchedulerService
 
             var psi = new ProcessStartInfo
             {
-                FileName = "schtasks.exe",
+                FileName = SystemTools.Schtasks,
                 Arguments = arguments,
                 UseShellExecute = false,
                 CreateNoWindow = true
@@ -122,7 +123,7 @@ public class SchedulerService : ISchedulerService
         {
             var psi = new ProcessStartInfo
             {
-                FileName = "schtasks.exe",
+                FileName = SystemTools.Schtasks,
                 Arguments = $"/delete /tn \"{taskName}\" /f",
                 UseShellExecute = false,
                 CreateNoWindow = true
@@ -137,7 +138,7 @@ public class SchedulerService : ISchedulerService
             // Fallback via PowerShell
             var psPsi = new ProcessStartInfo
             {
-                FileName = "powershell.exe",
+                FileName = SystemTools.PowerShell,
                 Arguments = $"-NoProfile -Command \"Unregister-ScheduledTask -TaskName '{taskName}' -Confirm:$false -ErrorAction SilentlyContinue\"",
                 UseShellExecute = false,
                 CreateNoWindow = true
@@ -163,7 +164,7 @@ public class SchedulerService : ISchedulerService
         {
             var psi = new ProcessStartInfo
             {
-                FileName = "schtasks.exe",
+                FileName = SystemTools.Schtasks,
                 Arguments = $"/query /tn \"{taskName}\" /v /fo list",
                 UseShellExecute = false,
                 CreateNoWindow = true,
@@ -238,7 +239,7 @@ public class SchedulerService : ISchedulerService
         {
             var psi = new ProcessStartInfo
             {
-                FileName = "schtasks.exe",
+                FileName = SystemTools.Schtasks,
                 Arguments = $"/run /tn \"{taskName}\"",
                 UseShellExecute = false,
                 CreateNoWindow = true
@@ -259,7 +260,7 @@ public class SchedulerService : ISchedulerService
         {
             Process.Start(new ProcessStartInfo
             {
-                FileName = "taskschd.msc",
+                FileName = SystemTools.TaskScheduler,
                 UseShellExecute = true
             });
         }
@@ -283,7 +284,7 @@ public class SchedulerService : ISchedulerService
 
             var psi = new ProcessStartInfo
             {
-                FileName = "powershell.exe",
+                FileName = SystemTools.PowerShell,
                 Arguments = $"-NoProfile -WindowStyle Hidden -Command \"{script}\"",
                 UseShellExecute = false,
                 CreateNoWindow = true

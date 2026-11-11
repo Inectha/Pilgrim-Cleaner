@@ -180,7 +180,7 @@ public class AppManagerService : IAppManagerService
         {
             var psi = new ProcessStartInfo
             {
-                FileName = "powershell.exe",
+                FileName = SystemTools.PowerShell,
                 Arguments = "-NoProfile -NonInteractive -Command \"Get-AppxPackage -ErrorAction SilentlyContinue | Where-Object { -not $_.IsFramework -and -not $_.NonRemovable } | Select-Object Name, Publisher, Version, InstallLocation, PackageFullName | ConvertTo-Json -Compress\"",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
@@ -278,7 +278,7 @@ public class AppManagerService : IAppManagerService
                     // would remove the package for the admin account instead of the signed-in user.
                     var psi = new ProcessStartInfo
                     {
-                        FileName = Path.Combine(Environment.SystemDirectory, @"WindowsPowerShell\v1.0\powershell.exe"),
+                        FileName = SystemTools.PowerShell,
                         Arguments = $"-NoProfile -NonInteractive -Command \"Remove-AppxPackage -Package '{app.PackageFullName}'\"",
                         UseShellExecute = false,
                         CreateNoWindow = true

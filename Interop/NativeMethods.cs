@@ -23,7 +23,9 @@ namespace LuminaCleaner.Interop;
 
 public static class NativeMethods
 {
-    [StructLayout(LayoutKind.Sequential, Pack = 4)]
+    // Default packing: 24 bytes on x64 as Windows expects. Pack = 4 made it 20 bytes and
+    // SHQueryRecycleBin returned E_INVALIDARG, so the Recycle Bin was always reported as empty.
+    [StructLayout(LayoutKind.Sequential)]
     public struct SHQUERYRBINFO
     {
         public int cbSize;

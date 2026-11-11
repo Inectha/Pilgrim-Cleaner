@@ -318,12 +318,13 @@ public static class Program
             return 0;
         }
 
-        // Interactive confirmation unless --force / -y or --dry-run or --json is specified
-        if (!opts.Force && !engineOptions.DryRun && !opts.Json)
+        // Interactive confirmation unless --force / -y or --dry-run is specified.
+        // --json alone used to skip this prompt, so a "machine-readable preview" deleted files.
+        if (!opts.Force && !engineOptions.DryRun)
         {
-            if (Console.IsInputRedirected)
+            if (Console.IsInputRedirected || opts.Json)
             {
-                WriteError("Unattended session detected without '--force' (-y) or '--dry-run'. Aborting to prevent unintended deletion.", opts.UseColor);
+                WriteError("Unattended or --json session detected without '--force' (-y) or '--dry-run'. Aborting to prevent unintended deletion.", opts.UseColor);
                 return 4;
             }
 

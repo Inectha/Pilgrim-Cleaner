@@ -57,6 +57,7 @@ public class Program
         Console.ResetColor();
 
         await RunTest("Native Methods: Query Recycle Bin", TestRecycleBinQuery);
+        await RunTest("Native Methods: Recycle Bin Struct Accepted By Windows", TestRecycleBinStructLayout);
         await RunTest("Native Methods: Elevation Detection", TestElevationCheck);
         await RunTest("Safety Policy: 24h Age Safety Buffer", TestAgeSafetyBuffer);
         await RunTest("Safety Policy: Resilient Locked File Deletion", TestLockedFileResilience);
@@ -72,6 +73,7 @@ public class Program
         await RunTest("Driver Health: Device Classification & WHQL Verification", TestDriverHealthClassification);
         await RunTest("Driver Health: Native Windows Update Session Integration", TestWindowsUpdateDriverSession);
         await RunTest("Driver Health: Driver & WHQL Update Correlation", TestDriverUpdateCorrelation);
+        await RunTest("Driver Health: Install Script Is Injection-Safe & Parses", TestDriverInstallScriptSafety);
         await RunTest("Storage Module: Developer & Package Manager Caches", TestDeveloperCacheModule);
         await RunTest("Storage Module: Server & CBS Archived Logs (IIS / CBS)", TestServerLogsModule);
         await RunTest("Storage Module: Dism WinSxS Component Store", TestDismComponentModule);
@@ -129,6 +131,15 @@ public class Program
         Assert(success, "QueryRecycleBinTotal returned false.");
         Assert(bytes >= 0, $"Recycle bin bytes cannot be negative (got {bytes}).");
         Assert(items >= 0, $"Recycle bin items count cannot be negative (got {items}).");
+        return Task.CompletedTask;
+    }
+
+    private static Task TestRecycleBinStructLayout()
+    {
+        // With a wrong struct size Windows rejects the call (E_INVALIDARG) and the bin always looks empty.
+        var info = new NativeMethods.SHQUERYRBINFO { cbSize = System.Runtime.InteropServices.Marshal.SizeOf<NativeMethods.SHQUERYRBINFO>() };
+        int hr = NativeMethods.SHQueryRecycleBin(Path.GetPathRoot(Environment.SystemDirectory), ref info);
+        Assert(hr == 0, $"SHQueryRecycleBin rejected the struct (HRESULT 0x{hr:X8}, size {info.cbSize}).");
         return Task.CompletedTask;
     }
 
@@ -598,6 +609,38 @@ public class Program
         Assert(!sata.HasPendingUpdate, "SATA driver without pending update should not be flagged.");
         Assert(sata.IsUpToDate, "SATA driver should be marked as up to date.");
 
+        return Task.CompletedTask;
+    }
+
+    private static Task TestDriverInstallScriptSafety()
+    {
+        // A crafted update title (from Windows Update / WSUS) trying to break out with straight,
+        // typographic and double quotes plus a subexpression.
+        string hostileTitle = "Intel ' ‘ ’ \" ; $(New-Item C:\\pwned) ; Driver";
+        string script = DriverHealthService.BuildDriverInstallScript(hostileTitle);
+        Assert(!script.Contains("pwned"), "The update title must never appear in the script as code.");
+
+        // Let PowerShell parse (not run) the script and report syntax errors.
+        string scriptFile = Path.Combine(Path.GetTempPath(), "PilgrimTest_DriverScript_" + Guid.NewGuid().ToString("N") + ".ps1");
+        File.WriteAllText(scriptFile, script);
+        try
+        {
+            var psi = new ProcessStartInfo(SystemTools.PowerShell,
+                $"-NoProfile -NonInteractive -Command \"$e=$null; [void][System.Management.Automation.Language.Parser]::ParseFile('{scriptFile}',[ref]$null,[ref]$e); exit $e.Count\"")
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+            using var process = Process.Start(psi)!;
+            process.WaitForExit(30000);
+            Assert(process.ExitCode == 0, $"Driver install script has {process.ExitCode} PowerShell syntax error(s).");
+        }
+        finally
+        {
+            try { File.Delete(scriptFile); } catch { }
+        }
         return Task.CompletedTask;
     }
 

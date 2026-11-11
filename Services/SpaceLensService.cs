@@ -113,7 +113,7 @@ public class SpaceLensService : ISpaceLensService
         {
             Process.Start(new ProcessStartInfo
             {
-                FileName = "explorer.exe",
+                FileName = SystemTools.Explorer,
                 Arguments = $"/select,\"{fullPath}\"",
                 UseShellExecute = true
             });

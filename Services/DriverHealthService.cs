@@ -111,7 +111,7 @@ public class DriverHealthService : IDriverHealthService
         {
             var psi = new ProcessStartInfo
             {
-                FileName = "powershell.exe",
+                FileName = SystemTools.PowerShell,
                 Arguments = "-NoProfile -NonInteractive -Command \"Get-CimInstance Win32_PnPSignedDriver -ErrorAction SilentlyContinue | Where-Object { $_.DeviceName -ne $null } | Select-Object -First 60 DeviceName, DriverVersion, DriverDate, Signer, DeviceClass, DeviceID | ConvertTo-Json -Compress\"",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
@@ -182,6 +182,43 @@ public class DriverHealthService : IDriverHealthService
         {
             // Suppress item error
         }
+    }
+
+    /// <summary>
+    /// Builds the elevated PowerShell fallback script that installs one driver update.
+    /// The update title comes from Windows Update / WSUS. It is embedded as Base64, which cannot
+    /// break out of the string literal (escaping ' alone misses the typographic quotes that
+    /// PowerShell also accepts as string delimiters).
+    /// </summary>
+    public static string BuildDriverInstallScript(string updateTitle)
+    {
+        string titleBase64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(updateTitle));
+        return $@"
+$title = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('{titleBase64}'))
+$session = New-Object -ComObject 'Microsoft.Update.Session'
+$searcher = $session.CreateUpdateSearcher()
+$searcher.Online = $true
+$result = $searcher.Search(""IsInstalled=0 and Type='Driver'"")
+foreach ($u in $result.Updates) {{
+    $titlePattern = '*' + [WildcardPattern]::Escape($title) + '*'
+    $modelPattern = '*' + [WildcardPattern]::Escape([string]$u.DriverModel) + '*'
+    if ($u.Title -like $titlePattern -or ($u.DriverModel -and $title -like $modelPattern)) {{
+        if (-not $u.EulaAccepted) {{ $u.AcceptEula() }}
+        $coll = New-Object -ComObject 'Microsoft.Update.UpdateColl'
+        $coll.Add($u) | Out-Null
+        $down = $session.CreateUpdateDownloader()
+        $down.Updates = $coll
+        $dr = $down.Download()
+        if ($dr.ResultCode -eq 2) {{
+            $inst = $session.CreateUpdateInstaller()
+            $inst.Updates = $coll
+            $ir = $inst.Install()
+            if ($ir.ResultCode -eq 2) {{ exit 0 }} else {{ exit $ir.ResultCode }}
+        }} else {{ exit $dr.ResultCode }}
+    }}
+}}
+exit 1
+";
     }
 
     public async Task<List<DriverUpdateModel>> CheckWhqlUpdatesAsync(CancellationToken ct = default)
@@ -361,35 +398,14 @@ public class DriverHealthService : IDriverHealthService
                 // Method B: Elevated installation helper via PowerShell (runs with Administrator UAC prompt)
                 update.InstallStatus = "Requesting administrative elevation...";
 
-                string safeTitle = update.Title.Replace("'", "''");
-                string psScript = $@"
-$session = New-Object -ComObject 'Microsoft.Update.Session'
-$searcher = $session.CreateUpdateSearcher()
-$searcher.Online = $true
-$result = $searcher.Search('IsInstalled=0 and Type=\'Driver\'')
-foreach ($u in $result.Updates) {{
-    if ($u.Title -like '*{safeTitle}*' -or '{safeTitle}' -like ('*' + $u.DriverModel + '*')) {{
-        if (-not $u.EulaAccepted) {{ $u.AcceptEula() }}
-        $coll = New-Object -ComObject 'Microsoft.Update.UpdateColl'
-        $coll.Add($u) | Out-Null
-        $down = $session.CreateUpdateDownloader()
-        $down.Updates = $coll
-        $dr = $down.Download()
-        if ($dr.ResultCode -eq 2) {{
-            $inst = $session.CreateUpdateInstaller()
-            $inst.Updates = $coll
-            $ir = $inst.Install()
-            if ($ir.ResultCode -eq 2) {{ exit 0 }} else {{ exit $ir.ResultCode }}
-        }} else {{ exit $dr.ResultCode }}
-    }}
-}}
-exit 1
-";
+                string psScript = BuildDriverInstallScript(update.Title);
 
                 var psi = new ProcessStartInfo
                 {
-                    FileName = "powershell.exe",
-                    Arguments = $"-NoProfile -ExecutionPolicy Bypass -Command \"{psScript.Replace("\r\n", " ").Replace("\n", " ")}\"",
+                    FileName = SystemTools.PowerShell,
+                    // -EncodedCommand (Base64 of UTF-16LE) avoids every command-line quoting problem.
+                    Arguments = "-NoProfile -ExecutionPolicy Bypass -EncodedCommand " +
+                                Convert.ToBase64String(System.Text.Encoding.Unicode.GetBytes(psScript)),
                     UseShellExecute = true,
                     Verb = "runas" // Prompt Windows UAC for administrative rights
                 };
