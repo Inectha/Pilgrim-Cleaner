@@ -5,15 +5,15 @@ An open-source, non-destructive Windows 10/11 & Windows Server maintenance utili
 [![UI](https://img.shields.io/badge/UI-WPF--UI%20%28Fluent%202%20%2F%20Mica%29-0078D4.svg)](https://wpfui.lepo.co/)
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11%20%7C%20Windows%20Server-0078D4.svg)](https://www.microsoft.com/windows)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Built With](https://img.shields.io/badge/Pair%20Programmed%20With-Google%20Antigravity-4285F4.svg)](https://deepmind.google/technologies/gemini/)
+[![AlternativeTo](https://img.shields.io/badge/AlternativeTo-Pilgrim%20Cleaner-blue?logo=alternativeto&logoColor=white)](https://alternativeto.net/software/pilgrim-cleaner/about/)
 
 ---
 
 ## About This Project
 
-I built Pilgrim Cleaner for my own personal use on Windows 11 as a clean, transparent alternative to commercial system maintenance utilities. Many existing tools are overloaded with telemetry, ads, aggressive background services, or risky registry "cleaners" that often do more harm than good.
+I built Pilgrim Cleaner for my own personal use on Windows 11 and Windows Server as a clean, transparent alternative to commercial system maintenance utilities. Many existing tools are overloaded with telemetry, ads, aggressive background services, or risky registry "cleaners" that often do more harm than good.
 
-I developed this utility using **[Google Antigravity](https://deepmind.google/technologies/gemini/)** (agentic AI pair programming) and decided to share it publicly on GitHub under the GPLv3 license for anyone looking for a modern, honest, and safe system maintenance tool.
+I decided to share this utility publicly on GitHub under the GPLv3 license for anyone looking for a modern, honest, fast, and safe system maintenance tool and sysadmin CLI.
 
 ### Core Principles
 - **No Registry Cleaners:** The Windows Registry is a structured system database. Decades of technical research show that registry cleaners provide zero performance gain and risk breaking installed applications. Pilgrim Cleaner never cleans or deletes registry keys.
