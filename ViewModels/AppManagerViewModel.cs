@@ -160,7 +160,7 @@ public partial class AppManagerViewModel : ObservableObject
         }
         else
         {
-            StatusText = $"Uninstallation cancelled or failed for {app.DisplayName}.";
+            StatusText = $"Uninstall of {app.DisplayName} not completed: {app.Status}";
         }
     }
 

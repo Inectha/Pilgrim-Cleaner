@@ -68,6 +68,7 @@ public class Program
         await RunTest("ViewModel: State Machine & Score Calculation", TestViewModelStateMachine);
         await RunTest("App Manager: Application Enumeration & Safety Exclusions", TestAppManagerEnumeration);
         await RunTest("App Manager: Post-Uninstall Residue Safety Guardrail", TestLeftoverSafetyGuardrails);
+        await RunTest("App Manager: Leftovers Ignore Live, Shared & Spoofed Folders", TestLeftoverSpoofingGuardrails);
         await RunTest("Driver Health: Device Classification & WHQL Verification", TestDriverHealthClassification);
         await RunTest("Driver Health: Native Windows Update Session Integration", TestWindowsUpdateDriverSession);
         await RunTest("Driver Health: Driver & WHQL Update Correlation", TestDriverUpdateCorrelation);
@@ -474,6 +475,67 @@ public class Program
             {
                 try { Directory.Delete(testPath, true); } catch { }
             }
+        }
+    }
+
+    private static async Task TestLeftoverSpoofingGuardrails()
+    {
+        var appService = new AppManagerService();
+        string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        string programData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+        string id = Guid.NewGuid().ToString("N")[..8];
+
+        string liveName = "PilgrimTest_Live_" + id;
+        string liveDir = Path.Combine(localAppData, liveName);
+        string sharedDir = Path.Combine(programData, "PilgrimTest_Shared_" + id);
+
+        try
+        {
+            Directory.CreateDirectory(liveDir);
+            Directory.CreateDirectory(sharedDir);
+
+            // 1. App is still registered (e.g. the uninstaller was cancelled): nothing may be pre-selected.
+            var liveApp = new AppItemModel
+            {
+                DisplayName = liveName,
+                InstallLocation = liveDir,
+                RegistryHive = Microsoft.Win32.RegistryHive.CurrentUser,
+                RegistryKeyPath = @"SOFTWARE\Microsoft\Windows\CurrentVersion" // exists, so "still registered"
+            };
+            var liveLeftovers = await appService.ScanLeftoversAsync(liveApp);
+            Assert(liveLeftovers.All(l => !l.IsSelected), "Folders of a still-installed app must never be pre-selected.");
+            await appService.DeleteLeftoversAsync(liveLeftovers);
+            Assert(Directory.Exists(liveDir), "Purging with default selection must not delete a still-installed app.");
+
+            // 2. Registry values with path tricks must not produce candidates.
+            var escapeApp = new AppItemModel { DisplayName = @"..\..\PilgrimTest_Escape" };
+            Assert((await appService.ScanLeftoversAsync(escapeApp)).Count == 0, "A DisplayName with '..' must be ignored.");
+
+            var sharedNameApp = new AppItemModel { DisplayName = "Microsoft" };
+            Assert((await appService.ScanLeftoversAsync(sharedNameApp)).Count == 0, "Shared folder names must be ignored.");
+
+            // 3. A per-user (HKCU) entry may not point its install folder at machine-wide data.
+            var perUserApp = new AppItemModel
+            {
+                DisplayName = "PilgrimTest_PerUser_" + id,
+                InstallLocation = sharedDir,
+                IsPerUserEntry = true
+            };
+            var perUserLeftovers = await appService.ScanLeftoversAsync(perUserApp);
+            Assert(perUserLeftovers.All(l => !l.FolderPath.Equals(sharedDir, StringComparison.OrdinalIgnoreCase)),
+                "A per-user entry must not be able to target a ProgramData folder.");
+
+            // 4. Shared install folders are never offered, even for per-machine entries.
+            string commonFiles = Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles);
+            var commonApp = new AppItemModel { DisplayName = "PilgrimTest_Common_" + id, InstallLocation = commonFiles };
+            var commonLeftovers = await appService.ScanLeftoversAsync(commonApp);
+            Assert(commonLeftovers.All(l => !l.FolderPath.Equals(commonFiles, StringComparison.OrdinalIgnoreCase)),
+                "'Common Files' must never be offered as a leftover.");
+        }
+        finally
+        {
+            try { Directory.Delete(liveDir, true); } catch { }
+            try { Directory.Delete(sharedDir, true); } catch { }
         }
     }
 

@@ -78,6 +78,17 @@ public partial class AppItemModel : ObservableObject
 
     public ObservableCollection<LeftoverFolderModel> Leftovers { get; } = [];
 
+    /// <summary>
+    /// True when the uninstall entry comes from HKEY_CURRENT_USER. Any program running as the
+    /// user can write those values, so they are never executed with administrator rights.
+    /// </summary>
+    public bool IsPerUserEntry { get; init; }
+
+    /// <summary>Registry location of the uninstall entry, used to verify that an uninstall really finished.</summary>
+    public Microsoft.Win32.RegistryHive? RegistryHive { get; init; }
+    public Microsoft.Win32.RegistryView RegistryView { get; init; } = Microsoft.Win32.RegistryView.Default;
+    public string? RegistryKeyPath { get; init; }
+
     public bool HasQuietUninstall => !string.IsNullOrWhiteSpace(QuietUninstallString) ||
                                      UninstallString.Contains("msiexec", StringComparison.OrdinalIgnoreCase) ||
                                      IsPackagedApp;
