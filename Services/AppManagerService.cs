@@ -336,35 +336,12 @@ public class AppManagerService : IAppManagerService
                 }
 
                 // Parse executable and arguments
-                string fileName;
-                string arguments = "";
+                var (fileName, arguments) = ParseUninstallCommand(targetCommand);
 
-                targetCommand = targetCommand.Trim();
-                if (targetCommand.StartsWith("\""))
+                if (Path.IsPathRooted(fileName) && !File.Exists(fileName))
                 {
-                    int endQuote = targetCommand.IndexOf('"', 1);
-                    if (endQuote > 0)
-                    {
-                        fileName = targetCommand.Substring(1, endQuote - 1);
-                        arguments = targetCommand[(endQuote + 1)..].Trim();
-                    }
-                    else
-                    {
-                        fileName = targetCommand.Trim('"');
-                    }
-                }
-                else
-                {
-                    int firstSpace = targetCommand.IndexOf(' ');
-                    if (firstSpace > 0)
-                    {
-                        fileName = targetCommand[..firstSpace];
-                        arguments = targetCommand[(firstSpace + 1)..].Trim();
-                    }
-                    else
-                    {
-                        fileName = targetCommand;
-                    }
+                    app.Status = $"Uninstaller missing: '{fileName}' not found. Zero Registry Tamper policy enforced.";
+                    return false;
                 }
 
                 var procInfo = new ProcessStartInfo
@@ -716,5 +693,109 @@ public class AppManagerService : IAppManagerService
             index++;
         }
         return $"{size:F2} {suffixes[index]}";
+    }
+
+    public static (string FileName, string Arguments) ParseUninstallCommand(string targetCommand)
+    {
+        string fileName;
+        string arguments = string.Empty;
+
+        targetCommand = targetCommand.Trim();
+        if (targetCommand.StartsWith("\""))
+        {
+            int endQuote = targetCommand.IndexOf('"', 1);
+            if (endQuote > 0)
+            {
+                fileName = targetCommand.Substring(1, endQuote - 1);
+                arguments = targetCommand[(endQuote + 1)..].Trim();
+            }
+            else
+            {
+                fileName = targetCommand.Trim('"');
+            }
+        }
+        else
+        {
+            int firstSpace = targetCommand.IndexOf(' ');
+            if (firstSpace > 0)
+            {
+                fileName = targetCommand[..firstSpace];
+                arguments = targetCommand[(firstSpace + 1)..].Trim();
+            }
+            else
+            {
+                fileName = targetCommand;
+            }
+        }
+
+        return (fileName, arguments);
+    }
+
+    public static bool IsUninstallerMissing(AppItemModel app, out string? missingExePath)
+    {
+        missingExePath = null;
+        if (app.IsPackagedApp) return false;
+
+        string targetCommand = !string.IsNullOrWhiteSpace(app.UninstallString)
+            ? app.UninstallString
+            : app.QuietUninstallString;
+
+        if (string.IsNullOrWhiteSpace(targetCommand)) return false;
+
+        var (fileName, _) = ParseUninstallCommand(targetCommand);
+        if (string.IsNullOrWhiteSpace(fileName)) return false;
+
+        if (fileName.Equals("msiexec", StringComparison.OrdinalIgnoreCase) ||
+            fileName.Equals("msiexec.exe", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        try
+        {
+            if (Path.IsPathRooted(fileName) && !File.Exists(fileName))
+            {
+                missingExePath = fileName;
+                return true;
+            }
+        }
+        catch
+        {
+            // Suppress invalid path syntax
+        }
+
+        return false;
+    }
+
+    public static string GetOrphanCleanupCommand(AppItemModel app)
+    {
+        if (string.IsNullOrWhiteSpace(app.RegistryKeyPath))
+            return string.Empty;
+
+        string subKey = app.RegistryKeyPath;
+        if (subKey.StartsWith(@"SOFTWARE\", StringComparison.OrdinalIgnoreCase))
+        {
+            subKey = subKey.Substring(@"SOFTWARE\".Length);
+        }
+
+        string root;
+        if (app.RegistryHive == RegistryHive.CurrentUser)
+        {
+            root = @"HKCU:\SOFTWARE\";
+        }
+        else
+        {
+            if (Environment.Is64BitOperatingSystem && app.RegistryView == RegistryView.Registry32)
+            {
+                root = @"HKLM:\SOFTWARE\WOW6432Node\";
+            }
+            else
+            {
+                root = @"HKLM:\SOFTWARE\";
+            }
+        }
+
+        string psPath = root + subKey;
+        return $"Remove-Item -Path \"{psPath}\" -Recurse -Force";
     }
 }

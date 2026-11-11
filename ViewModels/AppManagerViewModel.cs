@@ -17,6 +17,8 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -72,6 +74,18 @@ public partial class AppManagerViewModel : ObservableObject
 
     [ObservableProperty]
     private string _formattedLeftoverSize = "0.00 B";
+
+    [ObservableProperty]
+    private bool _isOrphanDrawerOpen;
+
+    [ObservableProperty]
+    private AppItemModel? _currentOrphanApp;
+
+    [ObservableProperty]
+    private string _orphanMissingExePath = string.Empty;
+
+    [ObservableProperty]
+    private string _orphanPowerShellCommand = string.Empty;
 
     [ObservableProperty]
     private bool _hasLoadedOnce;
@@ -148,6 +162,17 @@ public partial class AppManagerViewModel : ObservableObject
 
     private async Task ExecuteUninstallInternal(AppItemModel app, bool quiet)
     {
+        if (AppManagerService.IsUninstallerMissing(app, out string? missingExe))
+        {
+            CurrentOrphanApp = app;
+            OrphanMissingExePath = missingExe ?? "uninstaller.exe";
+            OrphanPowerShellCommand = AppManagerService.GetOrphanCleanupCommand(app);
+            IsOrphanDrawerOpen = true;
+            IsLeftoverDrawerOpen = false;
+            StatusText = $"Uninstaller missing for {app.DisplayName}. Zero Registry Tamper policy enforced.";
+            return;
+        }
+
         StatusText = $"Launching uninstaller for {app.DisplayName}...";
 
         bool success = await _appManagerService.UninstallApplicationAsync(app, quiet);
@@ -160,6 +185,17 @@ public partial class AppManagerViewModel : ObservableObject
         }
         else
         {
+            if (AppManagerService.IsUninstallerMissing(app, out string? postMissingExe))
+            {
+                CurrentOrphanApp = app;
+                OrphanMissingExePath = postMissingExe ?? "uninstaller.exe";
+                OrphanPowerShellCommand = AppManagerService.GetOrphanCleanupCommand(app);
+                IsOrphanDrawerOpen = true;
+                IsLeftoverDrawerOpen = false;
+                StatusText = $"Uninstaller missing for {app.DisplayName}. Zero Registry Tamper policy enforced.";
+                return;
+            }
+
             StatusText = $"Uninstall of {app.DisplayName} not completed: {app.Status}";
         }
     }
@@ -234,6 +270,44 @@ public partial class AppManagerViewModel : ObservableObject
         }
         ApplyFilterAndSort();
         StatusText = "Leftovers dismissed.";
+    }
+
+    [RelayCommand]
+    public void CopyOrphanPowerShellCommand()
+    {
+        if (string.IsNullOrWhiteSpace(OrphanPowerShellCommand)) return;
+        try
+        {
+            Clipboard.SetDataObject(OrphanPowerShellCommand, true);
+            StatusText = "PowerShell cleanup command copied to clipboard. Run in Administrator terminal.";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Clipboard busy: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    public void OpenWindowsInstalledApps()
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo("ms-settings:appsfeatures") { UseShellExecute = true });
+            StatusText = "Opened Windows Installed Apps settings.";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Failed to open Windows Settings: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    public void DismissOrphanDrawer()
+    {
+        IsOrphanDrawerOpen = false;
+        CurrentOrphanApp = null;
+        OrphanMissingExePath = string.Empty;
+        OrphanPowerShellCommand = string.Empty;
     }
 
     private void ApplyFilterAndSort()

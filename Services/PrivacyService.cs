@@ -142,41 +142,22 @@ public class PrivacyService : IPrivacyService
                 {
                     case "recent_items":
                         purged += PurgeFolder(RecentFolderPath, false);
-                        target.IsCleaned = true;
-                        target.ItemCount = 0;
-                        target.SizeBytes = 0;
-                        target.DiscoveredTraces.Clear();
                         break;
 
                     case "jump_lists":
                         purged += PurgeFolder(AutoDestFolderPath, true);
-                        target.IsCleaned = true;
-                        target.ItemCount = 0;
-                        target.SizeBytes = 0;
-                        target.DiscoveredTraces.Clear();
                         break;
 
                     case "custom_destinations":
                         purged += PurgeFolder(CustomDestFolderPath, true);
-                        target.IsCleaned = true;
-                        target.ItemCount = 0;
-                        target.SizeBytes = 0;
-                        target.DiscoveredTraces.Clear();
                         break;
 
                     case "explorer_history":
                         purged += PurgeExplorerMru();
-                        target.IsCleaned = true;
-                        target.ItemCount = 0;
-                        target.SizeBytes = 0;
-                        target.DiscoveredTraces.Clear();
                         break;
 
                     case "clipboard_buffer":
                         NativeMethods.ClearSystemClipboard();
-                        target.IsCleaned = true;
-                        target.ItemCount = 0;
-                        target.DiscoveredTraces.Clear();
                         purged++;
                         break;
                 }

@@ -99,12 +99,27 @@ public partial class PrivacyViewModel : ObservableObject
         try
         {
             int purged = await _privacyService.PurgePrivacyTargetsAsync(Targets, _cts.Token);
+            foreach (var target in Targets)
+            {
+                if (target.IsSelected)
+                {
+                    target.IsCleaned = true;
+                    target.ItemCount = 0;
+                    target.SizeBytes = 0;
+                    target.DiscoveredTraces.Clear();
+                }
+            }
+
             RecalculateMetrics();
             StatusMessage = $"Privacy shield active: {purged} traces successfully cleared.";
         }
         catch (OperationCanceledException)
         {
             StatusMessage = "Privacy purge canceled.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Privacy purge failed: {ex.Message}";
         }
         finally
         {

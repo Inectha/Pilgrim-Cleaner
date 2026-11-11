@@ -1259,6 +1259,97 @@
                             </Grid>
                         </Grid>
                     </Border>
+
+                    <!-- Orphan Software Registration Drawer (Missing Uninstaller / Zero Registry Policy) -->
+                    <Border Grid.Row="3"
+                            Visibility="{Binding AppManager.IsOrphanDrawerOpen, Converter={StaticResource BoolToVis}}"
+                            Background="#091422"
+                            BorderBrush="#00E5FF"
+                            BorderThickness="1"
+                            CornerRadius="10"
+                            Margin="28,0,28,16"
+                            Padding="16,14">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="25" Color="#00E5FF" Opacity="0.3" ShadowDepth="0" />
+                        </Border.Effect>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <!-- Header -->
+                            <Grid Grid.Row="0">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <ui:SymbolIcon Symbol="Alert24" Foreground="{StaticResource BrushPilgrimCyan}" FontSize="20" Margin="0,0,8,0" />
+                                    <TextBlock Text="ORPHAN SOFTWARE REGISTRATION DETECTED" FontWeight="Bold" FontSize="14" Foreground="#00E5FF" />
+                                </StackPanel>
+                                <Border Background="#102338" BorderBrush="#00E5FF" BorderThickness="1" CornerRadius="4" Padding="8,2" HorizontalAlignment="Right">
+                                    <TextBlock Text="Zero Registry Tamper Enforced" FontSize="11.5" FontWeight="SemiBold" Foreground="#38BDF8" />
+                                </Border>
+                            </Grid>
+
+                            <!-- Explanation & PowerShell command box -->
+                            <StackPanel Grid.Row="1" Margin="0,10,0,12">
+                                <TextBlock TextWrapping="Wrap" FontSize="13" Foreground="#E2E8F0" LineHeight="19">
+                                    <Run Text="The uninstaller for " />
+                                    <Run Text="{Binding AppManager.CurrentOrphanApp.DisplayName, Mode=OneWay}" FontWeight="Bold" Foreground="#FFFFFF" />
+                                    <Run Text=" was not found on your storage drive (" />
+                                    <Run Text="{Binding AppManager.OrphanMissingExePath, Mode=OneWay}" Foreground="#94A3B8" />
+                                    <Run Text="). The application files may have been removed manually." />
+                                </TextBlock>
+                                <TextBlock TextWrapping="Wrap" FontSize="12.5" Foreground="#94A3B8" Margin="0,6,0,8" LineHeight="18">
+                                    <Run Text="In accordance with Pilgrim Cleaner's " />
+                                    <Run Text="Zero Registry Tamper" FontWeight="SemiBold" Foreground="#00E5FF" />
+                                    <Run Text=" policy, Pilgrim Cleaner never modifies or deletes keys in the Windows Registry. You can clean this stale entry using Windows Settings or the PowerShell command below:" />
+                                </TextBlock>
+
+                                <!-- PowerShell Command Preview Box -->
+                                <Border Background="#060C14" BorderBrush="#1C2D42" BorderThickness="1" CornerRadius="6" Padding="12,8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding AppManager.OrphanPowerShellCommand, Mode=OneWay}"
+                                                   FontFamily="Consolas, Cascadia Code, Courier New" FontSize="12" Foreground="#38BDF8"
+                                                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                        <Button Grid.Column="1" Style="{StaticResource PilgrimSecondaryButtonStyle}"
+                                                Command="{Binding AppManager.CopyOrphanPowerShellCommandCommand}"
+                                                Padding="10,4" Margin="10,0,0,0">
+                                            <StackPanel Orientation="Horizontal">
+                                                <ui:SymbolIcon Symbol="Copy24" FontSize="14" Margin="0,0,4,0" />
+                                                <TextBlock Text="Copy Command" FontSize="12" />
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Action Buttons -->
+                            <Grid Grid.Row="2">
+                                <TextBlock Text="Open Windows Installed Apps to allow Windows to remove the broken entry safely."
+                                           FontSize="12" Foreground="#64748B" VerticalAlignment="Center" />
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button Content="Dismiss"
+                                            Style="{StaticResource PilgrimSecondaryButtonStyle}"
+                                            Command="{Binding AppManager.DismissOrphanDrawerCommand}"
+                                            Margin="0,0,8,0"
+                                            Padding="14,6"
+                                            FontSize="13" />
+                                    <Button Style="{StaticResource PilgrimPrimaryButtonStyle}"
+                                            Command="{Binding AppManager.OpenWindowsInstalledAppsCommand}"
+                                            Padding="14,6">
+                                        <StackPanel Orientation="Horizontal">
+                                            <ui:SymbolIcon Symbol="Open24" FontSize="14" Margin="0,0,6,0" />
+                                            <TextBlock Text="Open Windows Settings" FontSize="13" FontWeight="Bold" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </Grid>
+                    </Border>
                 </Grid>
 
                 <!-- ==================== VIEW 4: DRIVER HEALTH & WHQL AUDITOR ==================== -->

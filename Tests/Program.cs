@@ -70,6 +70,7 @@ public class Program
         await RunTest("App Manager: Application Enumeration & Safety Exclusions", TestAppManagerEnumeration);
         await RunTest("App Manager: Post-Uninstall Residue Safety Guardrail", TestLeftoverSafetyGuardrails);
         await RunTest("App Manager: Leftovers Ignore Live, Shared & Spoofed Folders", TestLeftoverSpoofingGuardrails);
+        await RunTest("App Manager: Orphan Registration & Zero Registry Policy", TestAppManagerOrphanGuardrails);
         await RunTest("Driver Health: Device Classification & WHQL Verification", TestDriverHealthClassification);
         await RunTest("Driver Health: Native Windows Update Session Integration", TestWindowsUpdateDriverSession);
         await RunTest("Driver Health: Driver & WHQL Update Correlation", TestDriverUpdateCorrelation);
@@ -621,6 +622,73 @@ public class Program
         }
     }
 
+    private static async Task TestAppManagerOrphanGuardrails()
+    {
+        // 1. Verify ParseUninstallCommand
+        var (quotedExe, quotedArgs) = AppManagerService.ParseUninstallCommand("\"C:\\Program Files\\App\\unins000.exe\" /SILENT");
+        Assert(quotedExe == @"C:\Program Files\App\unins000.exe", "Quoted executable path should be parsed without quotes.");
+        Assert(quotedArgs == "/SILENT", "Arguments should be parsed correctly.");
+
+        var (bareExe, bareArgs) = AppManagerService.ParseUninstallCommand(@"C:\App\uninstall.exe -force");
+        Assert(bareExe == @"C:\App\uninstall.exe", "Unquoted executable path should be parsed correctly.");
+        Assert(bareArgs == "-force", "Arguments should be parsed correctly.");
+
+        // 2. Verify IsUninstallerMissing
+        var orphanApp = new AppItemModel
+        {
+            DisplayName = "Orphaned Game Launcher",
+            UninstallString = "\"C:\\NonExistent_Fake_Dir_99999\\unins000.exe\" /SILENT",
+            RegistryHive = Microsoft.Win32.RegistryHive.LocalMachine,
+            RegistryView = Microsoft.Win32.RegistryView.Registry32,
+            RegistryKeyPath = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\OrphanGameLauncher_is1"
+        };
+        bool isMissing = AppManagerService.IsUninstallerMissing(orphanApp, out string? missingExe);
+        Assert(isMissing, "IsUninstallerMissing should return true when the uninstaller executable does not exist on disk.");
+        Assert(missingExe == @"C:\NonExistent_Fake_Dir_99999\unins000.exe", "Missing uninstaller path should match parsed target.");
+
+        // Packaged apps and msiexec are not flagged as missing exe
+        var msiApp = new AppItemModel
+        {
+            DisplayName = "Msi Installer App",
+            UninstallString = "MsiExec.exe /X{12345678-ABCD-1234-ABCD-1234567890AB}"
+        };
+        Assert(!AppManagerService.IsUninstallerMissing(msiApp, out _), "MsiExec apps should never be flagged as missing local uninstaller.");
+
+        var storeApp = new AppItemModel
+        {
+            DisplayName = "Store Package App",
+            IsPackagedApp = true
+        };
+        Assert(!AppManagerService.IsUninstallerMissing(storeApp, out _), "Packaged store apps should never be flagged as missing uninstaller.");
+
+        // 3. Verify GetOrphanCleanupCommand generates targeted, non-destructive PowerShell command
+        string cleanupCmdHklm32 = AppManagerService.GetOrphanCleanupCommand(orphanApp);
+        Assert(cleanupCmdHklm32.Contains(@"HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\OrphanGameLauncher_is1"),
+            "Generated command should target WOW6432Node for 32-bit HKLM entries.");
+        Assert(cleanupCmdHklm32.StartsWith("Remove-Item -Path", StringComparison.OrdinalIgnoreCase),
+            "Generated command must use Remove-Item.");
+
+        var hkcuApp = new AppItemModel
+        {
+            DisplayName = "Per User App",
+            RegistryHive = Microsoft.Win32.RegistryHive.CurrentUser,
+            RegistryKeyPath = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PerUserApp1"
+        };
+        string cleanupCmdHkcu = AppManagerService.GetOrphanCleanupCommand(hkcuApp);
+        Assert(cleanupCmdHkcu.Contains(@"HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PerUserApp1"),
+            "Generated command should target HKCU for per-user apps.");
+
+        // 4. Verify ViewModel intercepts orphan uninstalls and opens drawer without launching process
+        var vm = new LuminaCleaner.ViewModels.AppManagerViewModel();
+        await vm.UninstallApplicationAsync(orphanApp);
+        Assert(vm.IsOrphanDrawerOpen, "Orphan drawer should open when attempting to uninstall an app with missing uninstaller.");
+        Assert(vm.CurrentOrphanApp == orphanApp, "CurrentOrphanApp should be set to the targeted orphan app.");
+        Assert(vm.OrphanPowerShellCommand == cleanupCmdHklm32, "OrphanPowerShellCommand should be populated in the ViewModel.");
+
+        vm.DismissOrphanDrawerCommand.Execute(null);
+        Assert(!vm.IsOrphanDrawerOpen, "Dismissing orphan drawer should set IsOrphanDrawerOpen to false.");
+    }
+
     private static async Task TestDriverHealthClassification()
     {
         var driverService = new DriverHealthService();
@@ -921,6 +989,33 @@ public class Program
 
         var recent = targets.First(t => t.Id == "recent_items");
         Assert(recent.DiscoveredTraces != null, "DiscoveredTraces collection must not be null.");
+
+        // Verify PurgePrivacyAsync in PrivacyViewModel resets target UI state safely without cross-thread violations
+        var vm = new LuminaCleaner.ViewModels.PrivacyViewModel(service);
+        var dummyTarget = new LuminaCleaner.Models.PrivacyTargetModel
+        {
+            Id = "test_custom_target",
+            Title = "Test Target",
+            Description = "Testing Purge Behavior",
+            Category = "Testing",
+            IconSymbol = Wpf.Ui.Controls.SymbolRegular.Apps16,
+            ItemCount = 1,
+            SizeBytes = 256,
+            IsSelected = true
+        };
+        dummyTarget.DiscoveredTraces.Add(new LuminaCleaner.Models.PrivacyTraceItemModel
+        {
+            FileName = "test_trace.tmp",
+            FilePath = "C:\\test\\test_trace.tmp",
+            SizeBytes = 256
+        });
+        vm.Targets.Add(dummyTarget);
+        await vm.PurgePrivacyAsync();
+
+        Assert(dummyTarget.IsCleaned, "Target should be marked cleaned after purge.");
+        Assert(dummyTarget.ItemCount == 0, "Target item count should be 0 after purge.");
+        Assert(dummyTarget.SizeBytes == 0, "Target size bytes should be 0 after purge.");
+        Assert(dummyTarget.DiscoveredTraces.Count == 0, "DiscoveredTraces collection must be cleared on UI thread.");
     }
 
     private static Task TestHelpService()
