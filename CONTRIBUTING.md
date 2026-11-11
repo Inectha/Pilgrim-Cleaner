@@ -33,14 +33,32 @@ dotnet run
 ```
 
 ### Running Tests
-Before opening a pull request, ensure all test suites pass with zero failures:
+Before opening a pull request, ensure the architecture test suite passes with zero failures. The CI workflow runs the same suite on every pull request.
 ```powershell
-# 1. Run core architecture test suite (21 tests)
 dotnet run --project Tests/PilgrimCleaner.Tests.csproj
+```
 
-# 2. Run end-user audit harness (11 feature modules)
+The end-user audit harness changes real system state: it registers a scheduled task and toggles a startup entry. Run it only in a VM or Windows Sandbox (the release workflow runs it on a throwaway GitHub runner):
+```powershell
 dotnet run --project Tests/PilgrimCleaner.Tests.csproj -- --user-audit
 ```
+
+---
+
+## Releasing a New Version
+
+Releases are built by GitHub Actions (`.github/workflows/build-and-release.yml`). You do not build or upload anything by hand.
+
+1. Make sure `main` is green (CI passes) and update `CHANGELOG.md`.
+2. Tag the release and push the tag:
+   ```powershell
+   git tag v1.2.0
+   git push origin v1.2.0
+   ```
+3. The workflow tests, builds and publishes a GitHub Release with `PilgrimCleanerSetup.exe`, the portable ZIP and `SHA256SUMS.txt`. The version comes from the tag; `Directory.Build.props` only sets the version for local builds.
+4. Download the `winget-manifests-1.2.0` artifact from the workflow run and submit it to [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs) (for example with `wingetcreate submit`).
+
+To test the packaging locally, run `.\build-release.ps1 -Version 1.2.0`. The installer step needs [Inno Setup 6.3 or newer](https://jrsoftware.org/isinfo.php).
 
 ---
 

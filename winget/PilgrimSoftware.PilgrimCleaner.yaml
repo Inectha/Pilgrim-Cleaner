@@ -1,4 +1,4 @@
-# Created with WinGet Releaser / Pilgrim Software Packaging Pipeline
+# Template: the release workflow fills in PackageVersion for each tagged release.
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.version.1.6.0.schema.json
 
 PackageIdentifier: PilgrimSoftware.PilgrimCleaner

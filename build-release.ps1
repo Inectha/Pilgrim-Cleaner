@@ -1,75 +1,73 @@
-# Pilgrim Cleaner - Release Packaging Script (GUI + Sysadmin CLI + Winget)
+# Pilgrim Cleaner - Local Release Build
 # Copyright (C) 2026 Pilgrim Software
+#
+# Builds the same artifacts as the release workflow (.github/workflows/build-and-release.yml),
+# for testing a release on your own machine. Official releases are made by pushing a tag:
+#   git tag v1.2.0
+#   git push origin v1.2.0
+#
+# Usage:  .\build-release.ps1                 (version from Directory.Build.props)
+#         .\build-release.ps1 -Version 1.2.0
+# Output: dist\PilgrimCleaner\                 published GUI + CLI
+#         dist\PilgrimCleaner-v<ver>-Windows-x64.zip
+#         dist\installer\PilgrimCleanerSetup.exe   (only if Inno Setup 6.3+ is installed)
+
+[CmdletBinding()]
+param (
+    [string]$Version,
+    # Fail instead of skipping when Inno Setup is not installed (used by CI and the release workflow).
+    [switch]$RequireInstaller
+)
 
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
-$Version = "1.1.0"
+
+if (-not $Version) {
+    [xml]$props = Get-Content (Join-Path $PSScriptRoot "Directory.Build.props")
+    $Version = $props.Project.PropertyGroup.Version
+}
+if ($Version -notmatch '^\d+\.\d+\.\d+$') {
+    throw "Version must look like 1.2.0 (got '$Version')."
+}
+
 $DistDir = Join-Path $PSScriptRoot "dist"
 $AppDir = Join-Path $DistDir "PilgrimCleaner"
 $ZipFile = Join-Path $DistDir "PilgrimCleaner-v$Version-Windows-x64.zip"
 
-Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host "   Packaging Pilgrim Cleaner v$Version Release Package    " -ForegroundColor Cyan
-Write-Host "==========================================================" -ForegroundColor Cyan
+Write-Host "Packaging Pilgrim Cleaner v$Version" -ForegroundColor Cyan
 
-if (Test-Path $AppDir) {
-    Remove-Item $AppDir -Recurse -Force
+if (Test-Path $DistDir) {
+    Remove-Item $DistDir -Recurse -Force
 }
 New-Item -Path $AppDir -ItemType Directory -Force | Out-Null
 
-# 1. Publish WPF GUI Application
-Write-Host "1. Publishing WPF GUI Application (PilgrimCleaner.exe)..." -ForegroundColor Gray
-& "$PSScriptRoot\dotnet.cmd" publish "$PSScriptRoot\PilgrimCleaner.csproj" -c Release -o $AppDir --no-restore --nologo
-
-# 2. Publish Sysadmin CLI Application (pilgrim.exe) into same directory
-Write-Host "2. Publishing Sysadmin CLI (pilgrim.exe)..." -ForegroundColor Gray
-& "$PSScriptRoot\dotnet.cmd" publish "$PSScriptRoot\cli\PilgrimCli.csproj" -c Release -o $AppDir --no-restore --nologo
-
-# 3. Copy Installer & Documentation
-Write-Host "3. Adding installer scripts and documentation..." -ForegroundColor Gray
-Copy-Item "$PSScriptRoot\installer\Install.bat" -Destination $AppDir -Force
-Copy-Item "$PSScriptRoot\installer\Install-PilgrimCleaner.ps1" -Destination $AppDir -Force
-Copy-Item "$PSScriptRoot\README.md" -Destination $AppDir -Force
-Copy-Item "$PSScriptRoot\INSTALL.md" -Destination $AppDir -Force
-Copy-Item "$PSScriptRoot\LICENSE" -Destination $AppDir -Force
-
-# 4. Create ZIP Archive
-if (Test-Path $ZipFile) {
-    Remove-Item $ZipFile -Force
+# 1. Publish GUI and CLI (framework-dependent, sharing one folder)
+foreach ($project in "PilgrimCleaner.csproj", "cli\PilgrimCli.csproj") {
+    Write-Host "Publishing $project..." -ForegroundColor Gray
+    & "$PSScriptRoot\dotnet.cmd" publish (Join-Path $PSScriptRoot $project) -c Release -r win-x64 --self-contained false "-p:Version=$Version" -o $AppDir --nologo
+    if ($LASTEXITCODE -ne 0) { throw "dotnet publish $project failed" }
 }
-$OldRootZip = Join-Path $PSScriptRoot "PilgrimCleaner-v1.0.0-Windows-x64.zip"
-if (Test-Path $OldRootZip) {
-    Remove-Item $OldRootZip -Force
+Copy-Item (Join-Path $PSScriptRoot "README.md"), (Join-Path $PSScriptRoot "LICENSE") -Destination $AppDir -Force
+foreach ($exe in "PilgrimCleaner.exe", "pilgrim.exe") {
+    if (-not (Test-Path (Join-Path $AppDir $exe))) { throw "$exe missing from publish output" }
 }
 
-Write-Host "4. Compressing to $ZipFile..." -ForegroundColor Gray
+# 2. Portable ZIP
+Write-Host "Creating $ZipFile..." -ForegroundColor Gray
 Compress-Archive -Path "$AppDir\*" -DestinationPath $ZipFile -CompressionLevel Optimal
-Copy-Item $ZipFile -Destination (Join-Path $PSScriptRoot "PilgrimCleaner-v$Version-Windows-x64.zip") -Force
 
-# 5. Build Standalone Installer Wizard (PilgrimCleanerSetup.exe)
-Write-Host "5. Building single-file installer wizard (PilgrimCleanerSetup.exe)..." -ForegroundColor Gray
-$InstallerPublishDir = Join-Path $DistDir "installer"
-if (-not (Test-Path $InstallerPublishDir)) {
-    New-Item -Path $InstallerPublishDir -ItemType Directory -Force | Out-Null
-}
-& "$PSScriptRoot\dotnet.cmd" publish "$PSScriptRoot\installer\PilgrimInstaller.csproj" -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o $InstallerPublishDir --no-restore --nologo
-$SetupExePath = Join-Path $PSScriptRoot "PilgrimCleanerSetup.exe"
-Copy-Item (Join-Path $InstallerPublishDir "PilgrimCleanerSetup.exe") -Destination $SetupExePath -Force
-
-# 6. Update SHA256 in Winget Manifest
-$WingetInstallerManifest = Join-Path $PSScriptRoot "winget\PilgrimSoftware.PilgrimCleaner.installer.yaml"
-if ((Test-Path $SetupExePath) -and (Test-Path $WingetInstallerManifest)) {
-    $SetupHash = (Get-FileHash -Path $SetupExePath -Algorithm SHA256).Hash.ToUpperInvariant()
-    Write-Host "6. Updating Winget Manifest SHA256 ($SetupHash)..." -ForegroundColor Gray
-    $ManifestContent = Get-Content -Path $WingetInstallerManifest -Raw
-    $ManifestContent = $ManifestContent -replace 'InstallerSha256:\s*[0-9A-Fa-f]{64}', "InstallerSha256: $SetupHash"
-    Set-Content -Path $WingetInstallerManifest -Value $ManifestContent -NoNewline
+# 3. Inno Setup installer (optional locally)
+$iscc = Get-ChildItem "${env:ProgramFiles(x86)}\Inno Setup *\ISCC.exe", "$env:ProgramFiles\Inno Setup *\ISCC.exe" -ErrorAction SilentlyContinue |
+    Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
+if ($iscc) {
+    Write-Host "Compiling installer with $iscc..." -ForegroundColor Gray
+    & $iscc "/DMyAppVersion=$Version" (Join-Path $PSScriptRoot "installer\PilgrimCleaner.iss")
+    if ($LASTEXITCODE -ne 0) { throw "ISCC failed with exit code $LASTEXITCODE" }
+    if (-not (Test-Path (Join-Path $DistDir "installer\PilgrimCleanerSetup.exe"))) { throw "PilgrimCleanerSetup.exe was not created" }
+} elseif ($RequireInstaller) {
+    throw "Inno Setup (ISCC.exe) not found."
+} else {
+    Write-Host "Inno Setup not found: skipping PilgrimCleanerSetup.exe (install Inno Setup 6.3+ to build it)." -ForegroundColor Yellow
 }
 
-Write-Host "==========================================================" -ForegroundColor Green
-Write-Host "   Release Package v$Version Built Successfully!          " -ForegroundColor Green
-Write-Host "==========================================================" -ForegroundColor Green
-Write-Host "Distribution Directory: $AppDir" -ForegroundColor White
-Write-Host "Portable ZIP Archive:   $ZipFile" -ForegroundColor White
-Write-Host "Setup Wizard Executable: $SetupExePath" -ForegroundColor White
-Write-Host "Winget Manifests:        $(Join-Path $PSScriptRoot 'winget')" -ForegroundColor Cyan
+Write-Host "Done. Output in $DistDir" -ForegroundColor Green

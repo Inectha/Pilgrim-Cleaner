@@ -1,0 +1,11 @@
+<Project>
+  <!--
+    Single source of truth for the version of all projects (GUI, CLI, tests).
+    Local builds use the value below. Release builds get the version from the git tag:
+    the release workflow passes -p:Version=1.2.0 for tag v1.2.0, which overrides this.
+    AssemblyVersion and FileVersion are derived from Version automatically.
+  -->
+  <PropertyGroup>
+    <Version>1.1.0</Version>
+  </PropertyGroup>
+</Project>

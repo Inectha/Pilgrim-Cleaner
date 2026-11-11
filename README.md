@@ -157,16 +157,18 @@ pilgrim man automation
 
 ## Installation Options
 
+Requires the [.NET 10 Desktop Runtime (x64)](https://dotnet.microsoft.com/download/dotnet/10.0).
+
 ### 1. Setup Wizard (`PilgrimCleanerSetup.exe`) & Unattended Deploy
 Download and run **`PilgrimCleanerSetup.exe`** from [GitHub Releases](https://github.com/Inectha/Pilgrim-Cleaner/releases).
-- When run as **Administrator**, installs to `C:\Program Files\Pilgrim Cleaner` (AppLocker & WDAC compliant) and registers `pilgrim.exe` in the system `PATH`.
-- Supports unattended silent deployment for RMM/Intune/Winget: `PilgrimCleanerSetup.exe /S`
+- Installs machine-wide to `C:\Program Files\Pilgrim Cleaner` (AppLocker & WDAC compliant) and registers `pilgrim.exe` in the system `PATH`.
+- Unattended deployment for RMM/Intune: `PilgrimCleanerSetup.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART`
 
-### 2. 1-Click Native PowerShell / Batch Installer
-Download the release archive, extract it, and run **`Install.bat`** (or `.\Install-PilgrimCleaner.ps1 -Machine -Silent` from an elevated PowerShell prompt for Windows Server deployment).
+### 2. Winget
+`winget install PilgrimSoftware.PilgrimCleaner` (installs the .NET runtime dependency automatically).
 
 ### 3. Portable ZIP (Zero Installation)
-Download **`PilgrimCleaner-v1.1.0-Windows-x64.zip`**, extract anywhere, and run `PilgrimCleaner.exe` (GUI) or `pilgrim.exe` (CLI) directly.
+Download **`PilgrimCleaner-v<version>-Windows-x64.zip`**, extract it, and run `PilgrimCleaner.exe` (GUI) or `pilgrim.exe` (CLI) directly.
 
 See [**INSTALL.md**](INSTALL.md) for detailed workstation and Windows Server deployment instructions.
 

@@ -33,7 +33,7 @@ namespace LuminaCleaner.Cli;
 
 public static class Program
 {
-    public const string CliVersion = "1.1.0";
+    public static readonly string CliVersion = LuminaCleaner.AppInfo.Version;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {

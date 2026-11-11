@@ -1,61 +1,58 @@
-# Installation & Enterprise Deployment Guide — Pilgrim Cleaner v1.1.0
+# Installation & Enterprise Deployment Guide — Pilgrim Cleaner
 
-Pilgrim Cleaner supports interactive workstation installation, portable execution, and unattended enterprise/Windows Server deployment.
+Pilgrim Cleaner supports interactive installation, portable execution, and unattended enterprise / Windows Server deployment.
+
+**Requirement:** the [.NET 10 Desktop Runtime (x64)](https://dotnet.microsoft.com/download/dotnet/10.0). Windows Update / Microsoft Update keeps it patched. Winget installs it automatically; the setup wizard checks for it and links to the download if it is missing.
 
 ---
 
-## Option 1: Setup Wizard & Unattended Deployment (`PilgrimCleanerSetup.exe`)
+## Option 1: Setup Wizard (`PilgrimCleanerSetup.exe`)
 
 1. Download **`PilgrimCleanerSetup.exe`** from [GitHub Releases](https://github.com/Inectha/Pilgrim-Cleaner/releases).
-2. **Interactive Mode:** Double-click `PilgrimCleanerSetup.exe`.
-   - When launched as **Administrator**, the installer automatically targets `C:\Program Files\Pilgrim Cleaner` (compliant with default AppLocker and WDAC policies) and registers the `pilgrim` CLI in the Machine `PATH`.
-   - When launched as a **Standard User**, the installer targets `%LOCALAPPDATA%\Programs\Pilgrim Cleaner` and registers `pilgrim` in the User `PATH`.
-3. **Unattended / RMM / Intune Silent Mode:**
-   ```powershell
-   .\PilgrimCleanerSetup.exe /S
-   ```
+2. Run it. The installer asks for administrator rights and installs machine-wide to `C:\Program Files\Pilgrim Cleaner`. That location satisfies default AppLocker and WDAC path rules, and a standard user cannot change files there that later run as administrator or SYSTEM.
+3. Optionally, it adds the `pilgrim` CLI to the system `PATH` (on by default).
+
+**Unattended / RMM / Intune:**
+```powershell
+.\PilgrimCleanerSetup.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
+```
+Add `/TASKS="desktopicon,addtopath"` to choose the optional tasks explicitly, and `/LOG="C:\Temp\pilgrim-setup.log"` for a log file.
 
 ---
 
-## Option 2: 1-Click PowerShell / Batch Installer
-
-Included inside the release archive:
-
-- **Standard User:** Double-click **`Install.bat`**.
-- **Windows Server / Machine-Wide Admin Install:**
-  ```powershell
-  .\Install-PilgrimCleaner.ps1 -Machine -Silent -NoLaunch
-  ```
-  This deploys both `PilgrimCleaner.exe` (GUI) and `pilgrim.exe` (Sysadmin CLI) to `C:\Program Files\Pilgrim Cleaner`, registers the uninstaller in `HKLM`, and adds `pilgrim.exe` to the system `PATH`.
-
----
-
-## Option 3: Portable ZIP Archive (Zero Installation)
-
-1. Download **`PilgrimCleaner-v1.1.0-Windows-x64.zip`** (full GUI + CLI) or **`PilgrimCleaner-CLI-v1.1.0-Windows-x64.zip`** (headless Windows Server edition).
-2. Extract to any directory (e.g. `C:\Tools\PilgrimCleaner`).
-3. Run `PilgrimCleaner.exe` for the desktop UI or `.\pilgrim.exe man` in PowerShell for the CLI manual.
-
----
-
-## Option 4: Winget Package Manager
-
-Once published to the Windows Package Manager catalog (or using the local manifest in `winget/`):
+## Option 2: Winget
 
 ```powershell
-# Install from official manifest or local winget directory
-winget install --manifest .\winget\ --scope machine
+winget install PilgrimSoftware.PilgrimCleaner
+```
+
+Winget installs the .NET 10 Desktop Runtime dependency first. Each GitHub Release has the matching manifests attached as the `winget-manifests-<version>` workflow artifact, so you can also test locally:
+```powershell
+winget install --manifest .\winget-manifests-1.2.0\
+```
+
+---
+
+## Option 3: Portable ZIP (no installation)
+
+1. Download **`PilgrimCleaner-v<version>-Windows-x64.zip`** (GUI + CLI).
+2. Extract it to a folder that standard users cannot write to if you will run it elevated (e.g. `C:\Tools\PilgrimCleaner` with default ACLs is **not** suitable, `C:\Program Files\...` is).
+3. Run `PilgrimCleaner.exe` for the desktop UI, or `.\pilgrim.exe man` for the CLI manual.
+
+Every release includes `SHA256SUMS.txt` to verify the downloads:
+```powershell
+Get-FileHash .\PilgrimCleanerSetup.exe -Algorithm SHA256
 ```
 
 ---
 
 ## How to Uninstall
 
-Pilgrim Cleaner provides complete removal without leaving orphaned files or registry entries:
-
-- **Via Windows Settings:**  
-  Go to **Windows Settings $\rightarrow$ Apps $\rightarrow$ Installed Apps**, find **Pilgrim Cleaner**, and click **Uninstall**.
-- **Unattended CLI Uninstall:**
+- **Windows Settings:** go to **Settings → Apps → Installed apps**, find **Pilgrim Cleaner** and click **Uninstall**. This also removes the `PATH` entry and the background maintenance task.
+- **Unattended:**
   ```powershell
-  "C:\Program Files\Pilgrim Cleaner\Uninstall.bat" --silent
+  & "C:\Program Files\Pilgrim Cleaner\unins000.exe" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
   ```
+
+### Upgrading from v1.0 / v1.1
+Installing over a machine-wide v1.0/v1.1 install replaces it and removes its old uninstall entry. A **per-user** v1.0/v1.1 install (in `%LOCALAPPDATA%\Programs\Pilgrim Cleaner`) is not touched: uninstall it first from **Installed apps**.
