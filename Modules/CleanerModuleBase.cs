@@ -15,6 +15,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -32,6 +33,10 @@ namespace LuminaCleaner.Modules;
 public abstract partial class CleanerModuleBase : ObservableObject, ICleanerModule
 {
     private readonly object _itemsLock = new();
+
+    // Scan roots that passed the junction/symlink check, mapped to their real location.
+    // Only files below one of these roots can be deleted (see SafeDeleteFile).
+    private readonly ConcurrentDictionary<string, string> _verifiedRoots = new(StringComparer.OrdinalIgnoreCase);
 
     public abstract string Id { get; }
     public abstract string Name { get; }
@@ -96,6 +101,8 @@ public abstract partial class CleanerModuleBase : ObservableObject, ICleanerModu
 
     public virtual void ClearResults()
     {
+        _verifiedRoots.Clear();
+
         void InternalClear()
         {
             lock (_itemsLock)
@@ -244,6 +251,16 @@ public abstract partial class CleanerModuleBase : ObservableObject, ICleanerModu
     {
         if (!Directory.Exists(rootPath)) yield break;
 
+        // Refuse roots that are (or sit below) a junction/symlink planted by a non-privileged
+        // account; an elevated or SYSTEM run would otherwise clean the link's target.
+        string rootKey = Path.TrimEndingDirectorySeparator(rootPath);
+        if (!SafeFileOps.TryResolveTrustedDirectory(rootKey, out string? finalRoot, out string? reason))
+        {
+            Debug.WriteLine($"[{Id}] Skipping scan root '{rootKey}': {reason}");
+            yield break;
+        }
+        _verifiedRoots[rootKey] = finalRoot!;
+
         var dirQueue = new Queue<(string Path, int Depth)>();
         dirQueue.Enqueue((rootPath, 0));
 
@@ -323,29 +340,41 @@ public abstract partial class CleanerModuleBase : ObservableObject, ICleanerModu
                 return (true, null);
             }
 
-            // Atomic direct unlink without pre-opening a FileAccess.ReadWrite stream.
-            // Pre-opening files for ReadWrite before deleting triggers EDR ransomware behavioral heuristics
-            // and doubles I/O syscalls. Windows kernel natively blocks deletion of open/locked files with IOException.
-            if ((fi.Attributes & FileAttributes.ReadOnly) != 0)
+            // Only delete files found below a root that was verified during the scan, and only if the
+            // file still really lives there. The delete goes through the handle that was verified, so
+            // a folder swapped for a junction after the scan cannot redirect it.
+            string? expectedFinalPath = GetExpectedFinalPath(fullPath);
+            if (expectedFinalPath == null)
             {
-                fi.Attributes &= ~FileAttributes.ReadOnly;
+                return (false, "Skipped: file is not inside a folder that was verified during the scan.");
             }
 
-            fi.Delete();
-            return (true, null);
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return (false, "Unauthorized: Access denied by system security or file is locked by a protected service.");
-        }
-        catch (IOException ex)
-        {
-            return (false, $"File is currently locked by a running process or Windows service ({ex.Message})");
+            return SafeFileOps.DeleteFileIfAt(fullPath, expectedFinalPath);
         }
         catch (Exception ex)
         {
             return (false, $"Suppressed: {ex.Message}");
         }
+    }
+
+    private string? GetExpectedFinalPath(string fullPath)
+    {
+        string? bestRoot = null;
+        foreach (var root in _verifiedRoots.Keys)
+        {
+            string prefix = Path.EndsInDirectorySeparator(root) ? root : root + Path.DirectorySeparatorChar;
+            if (fullPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
+                (bestRoot == null || root.Length > bestRoot.Length))
+            {
+                bestRoot = root;
+            }
+        }
+
+        if (bestRoot == null || !_verifiedRoots.TryGetValue(bestRoot, out var finalRoot))
+            return null;
+
+        string relative = fullPath[bestRoot.Length..].TrimStart(Path.DirectorySeparatorChar);
+        return finalRoot + Path.DirectorySeparatorChar + relative;
     }
 
     protected void SafeDeleteEmptyDirectories(string rootPath)
@@ -354,8 +383,43 @@ public abstract partial class CleanerModuleBase : ObservableObject, ICleanerModu
         {
             if (!Directory.Exists(rootPath)) return;
 
-            foreach (var subDir in Directory.GetDirectories(rootPath, "*", SearchOption.AllDirectories)
-                         .OrderByDescending(d => d.Length))
+            // Only below roots verified during the scan, and only if the root still resolves to the same place.
+            string rootKey = Path.TrimEndingDirectorySeparator(rootPath);
+            if (!_verifiedRoots.TryGetValue(rootKey, out var verifiedFinalRoot) ||
+                !SafeFileOps.TryResolveTrustedDirectory(rootKey, out var currentFinalRoot, out _) ||
+                !string.Equals(verifiedFinalRoot, currentFinalRoot, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            // Collect subdirectories without following junctions or symbolic links
+            // (SearchOption.AllDirectories would walk into them).
+            var subDirectories = new List<string>();
+            var pending = new Stack<string>();
+            pending.Push(rootPath);
+            while (pending.Count > 0)
+            {
+                string current = pending.Pop();
+                string[] children;
+                try
+                {
+                    children = Directory.GetDirectories(current);
+                }
+                catch
+                {
+                    continue;
+                }
+
+                foreach (var child in children)
+                {
+                    if (SafeFileOps.IsReparsePoint(child))
+                        continue;
+                    subDirectories.Add(child);
+                    pending.Push(child);
+                }
+            }
+
+            foreach (var subDir in subDirectories.OrderByDescending(d => d.Length))
             {
                 try
                 {

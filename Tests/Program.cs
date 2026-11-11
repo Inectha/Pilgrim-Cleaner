@@ -16,6 +16,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -59,6 +60,8 @@ public class Program
         await RunTest("Native Methods: Elevation Detection", TestElevationCheck);
         await RunTest("Safety Policy: 24h Age Safety Buffer", TestAgeSafetyBuffer);
         await RunTest("Safety Policy: Resilient Locked File Deletion", TestLockedFileResilience);
+        await RunTest("Safety Policy: Junction Scan Root Is Refused", TestJunctionRootRefused);
+        await RunTest("Safety Policy: Post-Scan Junction Swap Cannot Redirect Delete", TestJunctionSwapAfterScan);
         await RunTest("Module C: Browser Non-Destructive Target Verification", TestBrowserNonDestructiveTargets);
         await RunTest("Engine Service: Throttled Progress Dispatching", TestThrottledProgress);
         await RunTest("Engine Service: Dry-Run Architecture", TestDryRunEngine);
@@ -188,7 +191,8 @@ public class Program
             using var fileStream = new FileStream(lockedFile, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
 
             var module = new TestFolderCleanerModule(testDir);
-            module.ClearResults();
+            // Deletion is only allowed below folders verified by a scan.
+            await module.ScanAsync(new EngineOptions { AgeSafetyBuffer = TimeSpan.Zero }, new Progress<ScanProgressReport>(), CancellationToken.None);
 
             var item = new CleanItemModel
             {
@@ -219,6 +223,105 @@ public class Program
                 try { Directory.Delete(testDir, true); } catch { }
             }
         }
+    }
+
+    private static async Task TestJunctionRootRefused()
+    {
+        // A standard user points a cache folder (a scan root) at someone else's data.
+        string baseDir = Path.Combine(Path.GetTempPath(), "PilgrimTest_JunctionRoot_" + Guid.NewGuid().ToString("N"));
+        string victimDir = Path.Combine(baseDir, "victim");
+        string junctionRoot = Path.Combine(baseDir, "cache");
+        Directory.CreateDirectory(victimDir);
+
+        try
+        {
+            string victimFile = Path.Combine(victimDir, "important.docx");
+            await File.WriteAllTextAsync(victimFile, "someone else's document");
+            File.SetLastWriteTimeUtc(victimFile, DateTime.UtcNow.AddDays(-3));
+            CreateJunction(junctionRoot, victimDir);
+
+            var module = new TestFolderCleanerModule(junctionRoot);
+            var scan = await module.ScanAsync(new EngineOptions { AgeSafetyBuffer = TimeSpan.FromHours(24) }, new Progress<ScanProgressReport>(), CancellationToken.None);
+            Assert(scan.Items.Count == 0, $"A user-created junction root must not be scanned, got {scan.Items.Count} items.");
+
+            await module.CleanAsync(new EngineOptions { DryRun = false }, new Progress<CleanProgressReport>(), CancellationToken.None);
+            Assert(File.Exists(victimFile), "File behind a junction root must never be deleted.");
+        }
+        finally
+        {
+            DeleteTestTree(baseDir, junctionRoot);
+        }
+    }
+
+    private static async Task TestJunctionSwapAfterScan()
+    {
+        // After the scan, a scanned subfolder is replaced by a junction to another folder
+        // that contains a file with the same name (time-of-check/time-of-use attack).
+        string baseDir = Path.Combine(Path.GetTempPath(), "PilgrimTest_JunctionSwap_" + Guid.NewGuid().ToString("N"));
+        string root = Path.Combine(baseDir, "root");
+        string sub = Path.Combine(root, "sub");
+        string victimDir = Path.Combine(baseDir, "victim");
+        Directory.CreateDirectory(sub);
+        Directory.CreateDirectory(victimDir);
+
+        try
+        {
+            DateTime old = DateTime.UtcNow.AddDays(-3);
+            string scannedFile = Path.Combine(sub, "old.log");
+            string plainFile = Path.Combine(root, "plain.log");
+            string victimFile = Path.Combine(victimDir, "old.log");
+            await File.WriteAllTextAsync(scannedFile, "temp");
+            await File.WriteAllTextAsync(plainFile, "temp");
+            await File.WriteAllTextAsync(victimFile, "someone else's file");
+            File.SetLastWriteTimeUtc(scannedFile, old);
+            File.SetLastWriteTimeUtc(plainFile, old);
+            File.SetLastWriteTimeUtc(victimFile, old);
+            File.SetAttributes(plainFile, FileAttributes.ReadOnly); // read-only temp files must still be removed
+
+            var module = new TestFolderCleanerModule(root);
+            var scan = await module.ScanAsync(new EngineOptions { AgeSafetyBuffer = TimeSpan.FromHours(24) }, new Progress<ScanProgressReport>(), CancellationToken.None);
+            Assert(scan.Items.Count == 2, $"Expected 2 scanned files, got {scan.Items.Count}.");
+
+            Directory.Move(sub, sub + "_moved");
+            CreateJunction(sub, victimDir);
+
+            await module.CleanAsync(new EngineOptions { DryRun = false }, new Progress<CleanProgressReport>(), CancellationToken.None);
+            Assert(File.Exists(victimFile), "Delete must not follow a junction swapped in after the scan.");
+            Assert(!File.Exists(plainFile), "A normal (read-only) file inside the verified root should still be deleted.");
+        }
+        finally
+        {
+            DeleteTestTree(baseDir, sub);
+        }
+    }
+
+    private static void CreateJunction(string link, string target)
+    {
+        // mklink /J needs no administrator rights, which is exactly why this attack matters.
+        var psi = new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, "cmd.exe"), $"/c mklink /J \"{link}\" \"{target}\"")
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+        using var process = Process.Start(psi)!;
+        process.WaitForExit(10000);
+        if (!Directory.Exists(link) || (File.GetAttributes(link) & FileAttributes.ReparsePoint) == 0)
+            throw new Exception($"Test setup failed: could not create junction '{link}'.");
+    }
+
+    private static void DeleteTestTree(string baseDir, string junction)
+    {
+        // Remove the junction itself first so cleanup can never touch its target.
+        try { if (Directory.Exists(junction)) Directory.Delete(junction, false); } catch { }
+        try
+        {
+            foreach (var file in Directory.EnumerateFiles(baseDir, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, FileAttributes.Normal);
+            Directory.Delete(baseDir, true);
+        }
+        catch { }
     }
 
     private static Task TestBrowserNonDestructiveTargets()
