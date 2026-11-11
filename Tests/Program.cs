@@ -79,6 +79,7 @@ public class Program
         await RunTest("Sysadmin Engine: Multi-Profile User Resolution", TestUserProfileResolver);
         await RunTest("Space Lens: Large & Ancient Files Library Discovery", TestSpaceLensScanner);
         await RunTest("Duplicates: Two-Tier Cryptographic SHA-256 Audit", TestDuplicatesFinder);
+        await RunTest("Duplicates: Overlapping Roots Never Make A File Its Own Copy", TestDuplicatesOverlappingRoots);
         await RunTest("Startup Accelerator: Non-Destructive StartupApproved", TestStartupAccelerator);
         await RunTest("System Telemetry: Hardware & Memory Integrity", TestTelemetryService);
         await RunTest("Privacy Shield: Footprint & Activity Trace Audit", TestPrivacyService);
@@ -734,6 +735,43 @@ public class Program
         finally
         {
             try { Directory.Delete(testDir, true); } catch { }
+        }
+    }
+
+    private static async Task TestDuplicatesOverlappingRoots()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "PilgrimTest_DupOverlap_" + Guid.NewGuid().ToString("N"));
+        string photos = Path.Combine(root, "Photos");
+        Directory.CreateDirectory(photos);
+
+        try
+        {
+            var unique = new byte[4096];
+            new Random(42).NextBytes(unique);
+            string onlyCopy = Path.Combine(photos, "holiday.jpg");
+            await File.WriteAllBytesAsync(onlyCopy, unique);
+
+            var service = new DuplicatesService();
+
+            // Same folder reached via three overlapping roots (like Pictures redirected into Documents).
+            var groups = await service.FindDuplicatesAsync([root, photos, root + "\\"], null, CancellationToken.None);
+            Assert(groups.Count == 0, $"A single file must not be reported as its own duplicate, got {groups.Count} group(s).");
+
+            // A real duplicate is still found, with two different paths.
+            string realCopy = Path.Combine(root, "holiday (1).jpg");
+            await File.WriteAllBytesAsync(realCopy, unique);
+            groups = await service.FindDuplicatesAsync([root, photos], null, CancellationToken.None);
+            Assert(groups.Count == 1 && groups[0].Copies.Count == 2, "Expected exactly one group with two copies.");
+            Assert(groups[0].Copies.Select(c => c.FullPath).Distinct(StringComparer.OrdinalIgnoreCase).Count() == 2,
+                "Copies in a group must be different files.");
+
+            // The recycle helper refuses to remove a file "in favour of" itself.
+            Assert(!service.RecycleDuplicate(onlyCopy, onlyCopy), "RecycleDuplicate must refuse when copy and kept file are the same.");
+            Assert(File.Exists(onlyCopy), "The only copy must still exist.");
+        }
+        finally
+        {
+            try { Directory.Delete(root, true); } catch { }
         }
     }
 

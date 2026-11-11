@@ -25,5 +25,8 @@ namespace LuminaCleaner.Services;
 public interface IDuplicatesService
 {
     Task<IReadOnlyList<DuplicateGroupModel>> FindDuplicatesAsync(IEnumerable<string> rootPaths, IProgress<int>? progress, CancellationToken ct);
-    bool DeleteFileToRecycleBin(string path);
+    bool DeleteFileToRecycleBin(string path, bool interactive = false);
+
+    /// <summary>Recycles <paramref name="copyPath"/> only if <paramref name="keptPath"/> is a different, existing file of the same size.</summary>
+    bool RecycleDuplicate(string copyPath, string keptPath, bool interactive = false);
 }

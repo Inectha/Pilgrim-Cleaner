@@ -89,6 +89,7 @@ public static class NativeMethods
     public const ushort FOF_NOCONFIRMATION = 0x0010;
     public const ushort FOF_SILENT = 0x0004;
     public const ushort FOF_NOERRORUI = 0x0400;
+    public const ushort FOF_WANTNUKEWARNING = 0x4000;
 
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
     public static extern int SHFileOperation(ref SHFILEOPSTRUCT lpFileOp);
@@ -218,23 +219,50 @@ public static class NativeMethods
     }
 
     /// <summary>
-    /// Safely moves a file or directory to the Windows Recycle Bin (with undo support).
+    /// Moves a file or directory to the Windows Recycle Bin (with undo support).
+    /// Network shares and removable drives have no Recycle Bin: the Shell would delete
+    /// permanently without asking, so those paths are refused. With
+    /// <paramref name="warnIfPermanent"/> (interactive use only) Windows asks before
+    /// permanently deleting an item that does not fit in the Recycle Bin.
     /// </summary>
-    public static bool SendToRecycleBin(string path)
+    public static bool SendToRecycleBin(string path, bool warnIfPermanent = false)
     {
         if (string.IsNullOrWhiteSpace(path) || (!File.Exists(path) && !Directory.Exists(path)))
             return false;
 
+        if (!IsOnFixedLocalDrive(path))
+            return false;
+
         try
         {
+            ushort flags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_SILENT | FOF_NOERRORUI;
+            if (warnIfPermanent)
+                flags |= FOF_WANTNUKEWARNING;
+
             var fileOp = new SHFILEOPSTRUCT
             {
                 wFunc = FO_DELETE,
-                pFrom = path + '\0' + '\0', // Must be double-null terminated
-                fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_SILENT | FOF_NOERRORUI
+                pFrom = Path.GetFullPath(path) + '\0' + '\0', // Must be double-null terminated
+                fFlags = flags
             };
             int result = SHFileOperation(ref fileOp);
             return result == 0 && !fileOp.fAnyOperationsAborted;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool IsOnFixedLocalDrive(string path)
+    {
+        try
+        {
+            string full = Path.GetFullPath(path);
+            if (full.StartsWith(@"\\", StringComparison.Ordinal))
+                return false; // UNC path: network share
+            string? root = Path.GetPathRoot(full);
+            return root != null && new DriveInfo(root).DriveType == DriveType.Fixed;
         }
         catch
         {

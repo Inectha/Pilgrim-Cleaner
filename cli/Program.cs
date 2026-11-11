@@ -557,6 +557,25 @@ public static class Program
         int recycledFiles = 0;
         long recycledBytes = 0;
 
+        if (opts.RecycleDuplicates && groups.Count > 0 && !opts.DryRun && !opts.Force)
+        {
+            int toRecycle = groups.Sum(g => g.RedundantCopies);
+            if (Console.IsInputRedirected || opts.Json)
+            {
+                WriteError("Recycling duplicates needs confirmation. Add '--force' (-y) for unattended runs, or '--dry-run' to preview.", opts.UseColor);
+                return 4;
+            }
+
+            WriteColored($"  Move {toRecycle:N0} duplicate files ({CleanItemModel.FormatBytes(groups.Sum(g => g.WastedBytes))}) to the Recycle Bin, keeping the {opts.KeepStrategy} copy? [y/N]: ", ConsoleColor.Yellow, opts.UseColor);
+            string? response = Console.ReadLine()?.Trim();
+            if (!string.Equals(response, "y", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(response, "yes", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine("  [ABORTED] No files were moved.");
+                return 0;
+            }
+        }
+
         if (opts.RecycleDuplicates && groups.Count > 0)
         {
             foreach (var group in groups)
@@ -567,7 +586,7 @@ public static class Program
 
                 for (int i = 1; i < ordered.Count; i++)
                 {
-                    if (opts.DryRun || service.DeleteFileToRecycleBin(ordered[i].FullPath))
+                    if (opts.DryRun || service.RecycleDuplicate(ordered[i].FullPath, ordered[0].FullPath))
                     {
                         recycledFiles++;
                         recycledBytes += ordered[i].SizeBytes;
@@ -1095,6 +1114,11 @@ public static class Program
                         return false;
                     }
                     options.KeepStrategy = args[++i].Trim().ToLowerInvariant();
+                    if (options.KeepStrategy is not ("oldest" or "newest"))
+                    {
+                        error = $"Invalid value for --keep: '{options.KeepStrategy}' (expected: oldest or newest).";
+                        return false;
+                    }
                     break;
 
                 case "--recycle":

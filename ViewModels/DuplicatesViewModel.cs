@@ -116,18 +116,25 @@ public partial class DuplicatesViewModel : ObservableObject
     {
         int deleted = 0;
         long bytesRecovered = 0;
+        int notRecycled = 0;
 
         foreach (var group in DuplicateGroups.ToList())
         {
+            var original = group.Copies.FirstOrDefault(c => c.IsOriginal);
+            if (original == null) continue; // never delete from a group without a kept copy
+
             var copiesToDelete = group.Copies.Where(c => c.IsSelected && !c.IsOriginal).ToList();
             foreach (var copy in copiesToDelete)
             {
-                if (_duplicatesService.DeleteFileToRecycleBin(copy.FullPath))
+                if (!_duplicatesService.RecycleDuplicate(copy.FullPath, original.FullPath, interactive: true))
                 {
-                    deleted++;
-                    bytesRecovered += copy.SizeBytes;
-                    group.Copies.Remove(copy);
+                    notRecycled++;
+                    continue;
                 }
+
+                deleted++;
+                bytesRecovered += copy.SizeBytes;
+                group.Copies.Remove(copy);
             }
 
             if (group.Copies.Count <= 1)
@@ -137,7 +144,10 @@ public partial class DuplicatesViewModel : ObservableObject
         }
 
         RecalculateMetrics();
-        StatusMessage = $"Safely moved {deleted} duplicate files ({FormatBytes(bytesRecovered)}) to the Recycle Bin.";
+        StatusMessage = notRecycled == 0
+            ? $"Safely moved {deleted} duplicate files ({FormatBytes(bytesRecovered)}) to the Recycle Bin."
+            : $"Moved {deleted} duplicate files ({FormatBytes(bytesRecovered)}) to the Recycle Bin. " +
+              $"{notRecycled} were kept: they are on a drive without a Recycle Bin (network/USB), or the original changed.";
     }
 
     [RelayCommand]

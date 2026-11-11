@@ -127,6 +127,7 @@ public class SpaceLensService : ISpaceLensService
 
     public bool DeleteToRecycleBin(string fullPath)
     {
-        return NativeMethods.SendToRecycleBin(fullPath);
+        // GUI only: let Windows warn before permanently deleting something that does not fit in the Recycle Bin.
+        return NativeMethods.SendToRecycleBin(fullPath, warnIfPermanent: true);
     }
 }
