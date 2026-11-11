@@ -192,7 +192,7 @@ dotnet build
 # Run the application
 dotnet run
 
-# Run the 21-point architecture test suite
+# Run the 30-point architecture test suite
 dotnet run --project Tests/PilgrimCleaner.Tests.csproj
 
 # Run the 11-module end-user audit harness
