@@ -3,7 +3,10 @@
 ; Copyright (C) 2026 Pilgrim Software
 
 #define MyAppName "Pilgrim Cleaner"
-#define MyAppVersion "1.0.0"
+; CI passes the version on the command line: ISCC /DMyAppVersion=1.2.0
+#ifndef MyAppVersion
+  #define MyAppVersion "1.1.0"
+#endif
 #define MyAppPublisher "Pilgrim Software"
 #define MyAppURL "https://github.com"
 #define MyAppExeName "PilgrimCleaner.exe"
