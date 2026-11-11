@@ -18,10 +18,10 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Setup .NET 8.0 SDK
+      - name: Setup .NET 10.0 SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.0.x
 
       - name: Restore NuGet Packages
         run: dotnet restore PilgrimCleaner.csproj

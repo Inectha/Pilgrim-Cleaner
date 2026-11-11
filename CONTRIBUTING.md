@@ -20,7 +20,7 @@ All contributions must strictly uphold Pilgrim Cleaner's core safety commitments
 
 ### Prerequisites
 - Windows 10 (1903+) or Windows 11
-- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- [.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - Visual Studio 2022, JetBrains Rider, or VS Code / Antigravity
 
 ### Build & Run

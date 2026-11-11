@@ -2741,7 +2741,7 @@
                                             <TextBlock Text="Version 1.1.0" FontSize="14" FontWeight="Bold" Foreground="#00E5FF" />
                                         </Border>
                                         <Border Background="#16273C" CornerRadius="4" Padding="8,4" Margin="0,0,8,0">
-                                            <TextBlock Text=".NET 8.0 Windows x64" FontSize="14" FontWeight="Bold" Foreground="#94A3B8" />
+                                            <TextBlock Text=".NET 10.0 Windows x64" FontSize="14" FontWeight="Bold" Foreground="#94A3B8" />
                                         </Border>
                                         <Border Background="#16273C" CornerRadius="4" Padding="8,4" Margin="0,0,8,0">
                                             <TextBlock Text="Sysadmin CLI (pilgrim.exe)" FontSize="14" FontWeight="Bold" Foreground="#00FF9D" />

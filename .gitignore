@@ -1,4 +1,4 @@
-## .gitignore for Pilgrim Cleaner (.NET 8 WPF)
+## .gitignore for Pilgrim Cleaner (.NET 10 WPF)
 
 # Build results & distribution artifacts
 [Bb]in/
