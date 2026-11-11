@@ -80,7 +80,7 @@ public static class TerminalManual
         Console.WriteLine("    pilgrim clean      [--profile <name>] [--dry-run] [--force] [--all-profiles] [--json]");
         Console.WriteLine("    pilgrim status     [--json]");
         Console.WriteLine("    pilgrim modules    [--json]");
-        Console.WriteLine("    pilgrim duplicates [<path>] [--keep oldest|newest] [--recycle] [--json]");
+        Console.WriteLine("    pilgrim duplicates [<path>] [--keep oldest|newest] [--recycle] [--force] [--json]");
         Console.WriteLine("    pilgrim spacelens  [<path>] [--min-size-mb <N>] [--json]");
         Console.WriteLine("    pilgrim startup    [--json]");
         Console.WriteLine("    pilgrim drivers    [--check-whql] [--json]");
@@ -97,6 +97,8 @@ public static class TerminalManual
         Console.WriteLine("      * Zero RAM Flushing Hacks: Never calls EmptyWorkingSet to fake memory metrics.");
         Console.WriteLine("      * 24-Hour Safety Buffer:   Strictly preserves files created/modified <24h ago");
         Console.WriteLine("                                 to protect active MSI/Windows Updates and user sessions.");
+        Console.WriteLine("      * Junction Defense:        SafeFileOps refuses user-planted NTFS junctions/symlinks");
+        Console.WriteLine("                                 and verifies real handle paths before unlinking.");
         Console.WriteLine("      * EDR & AppLocker Safe:    Uses atomic Win32/BCL file operations without packers");
         Console.WriteLine("                                 or pre-delete ReadWrite streams.");
         Console.WriteLine();
@@ -112,6 +114,8 @@ public static class TerminalManual
         Console.WriteLine("    --include-dism           Include WinSxS DISM /StartComponentCleanup (Admin)");
         Console.WriteLine("    --dry-run, --what-if     Simulate cleanup without deleting any files");
         Console.WriteLine("    --force, -y              Execute cleanup without interactive confirmation prompt");
+        Console.WriteLine("    --keep <oldest|newest>   Preserve oldest or newest file when finding/recycling duplicates");
+        Console.WriteLine("    --recycle                Move redundant duplicate copies to Windows Recycle Bin");
         Console.WriteLine("    --json                   Emit machine-readable JSON to stdout (suppresses banners)");
         Console.WriteLine("    --event-log              Write execution report to Windows Application Event Log");
         Console.WriteLine("    --log-file <path>        Append execution summary and module details to log file");
@@ -173,6 +177,16 @@ public static class TerminalManual
         Console.WriteLine("       'C:\\Windows\\System32\\config\\systemprofile'. Pilgrim Cleaner automatically");
         Console.WriteLine("       detects SYSTEM context and enumerates all real user profiles in C:\\Users\\*");
         Console.WriteLine("       (skipping junctions, ReparsePoints, Default, and Public profiles).");
+        Console.WriteLine();
+        Console.WriteLine("    4. NTFS Junction & Symlink Redirection Protection (SafeFileOps):");
+        Console.WriteLine("       When running elevated or as SYSTEM, an unprivileged user could plant junctions");
+        Console.WriteLine("       (mklink /J) in cache/temp roots to redirect deletions to victim folders.");
+        Console.WriteLine("       Pilgrim Cleaner validates that scan roots are not junctions owned by normal");
+        Console.WriteLine("       users, and unlinks files via direct handle checks without following symlinks.");
+        Console.WriteLine();
+        Console.WriteLine("    5. System Binary Defense & Privilege Guardrails (SystemTools):");
+        Console.WriteLine("       Windows tools (powershell.exe, schtasks.exe, dism.exe) are invoked exclusively");
+        Console.WriteLine("       by absolute System32 paths to prevent current-directory PATH planting.");
     }
 
     private static void RenderAutomation(bool useColor)
@@ -207,7 +221,7 @@ public static class TerminalManual
         Console.WriteLine("    1      Cleaned (Space Reclaimed)     Cleanup succeeded and freed >0 bytes (or use 0).");
         Console.WriteLine("    2      Warning / Threshold Exceeded  Audit exceeded --fail-threshold-gb.");
         Console.WriteLine("    3      Elevation Required            Requested operation requires Administrator rights.");
-        Console.WriteLine("    4      Invalid Arguments             Unknown CLI flag, module ID, or profile name.");
+        Console.WriteLine("    4      Invalid Arguments / Aborted   Invalid flag/module, or clean/recycle aborted without --force in JSON mode.");
         Console.WriteLine("    10     Unhandled Error               Execution failed due to an unexpected exception.");
     }
 
