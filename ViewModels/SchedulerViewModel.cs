@@ -110,17 +110,12 @@ public partial class SchedulerViewModel : ObservableObject
     [RelayCommand]
     public void ApplyScheduleChanges()
     {
-        if (!IsScheduleActive)
-        {
-            StatusMessage = "Schedule settings updated. Toggle the switch to activate.";
-            return;
-        }
-
         string exePath = Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty;
         string dayCode = MapDayToCode(SelectedDay);
 
         if (_schedulerService.RegisterCustomMaintenanceTask(exePath, SelectedFrequency, dayCode, SelectedTime))
         {
+            IsScheduleActive = true;
             StatusMessage = $"Updated Windows Schedule: {SelectedFrequency} on {SelectedDay} at {SelectedTime}.";
             TaskInfo = _schedulerService.GetTaskStatusInfo();
         }

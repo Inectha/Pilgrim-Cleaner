@@ -25,6 +25,7 @@ public enum CleanItemStatus
     SkippedLocked,
     SkippedRecent,
     SkippedElevation,
+    SkippedWhitelisted,
     Failed
 }
 

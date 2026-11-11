@@ -76,11 +76,15 @@ public static class TerminalManual
         Console.WriteLine();
 
         WriteSection("SYNOPSIS", useColor);
-        Console.WriteLine("    pilgrim audit   [--profile <name>] [--modules <list>] [--all-profiles] [--json]");
-        Console.WriteLine("    pilgrim clean   [--profile <name>] [--dry-run] [--force] [--all-profiles] [--json]");
-        Console.WriteLine("    pilgrim status  [--json]");
-        Console.WriteLine("    pilgrim modules [--json]");
-        Console.WriteLine("    pilgrim man     [overview | profiles | security | automation | exitcodes]");
+        Console.WriteLine("    pilgrim audit      [--profile <name>] [--modules <list>] [--all-profiles] [--json]");
+        Console.WriteLine("    pilgrim clean      [--profile <name>] [--dry-run] [--force] [--all-profiles] [--json]");
+        Console.WriteLine("    pilgrim status     [--json]");
+        Console.WriteLine("    pilgrim modules    [--json]");
+        Console.WriteLine("    pilgrim duplicates [<path>] [--keep oldest|newest] [--recycle] [--json]");
+        Console.WriteLine("    pilgrim spacelens  [<path>] [--min-size-mb <N>] [--json]");
+        Console.WriteLine("    pilgrim startup    [--json]");
+        Console.WriteLine("    pilgrim drivers    [--check-whql] [--json]");
+        Console.WriteLine("    pilgrim man        [overview | profiles | security | automation | exitcodes]");
         Console.WriteLine();
 
         WriteSection("DESCRIPTION", useColor);
@@ -101,6 +105,7 @@ public static class TerminalManual
         Console.WriteLine("    --profile <name>         Apply preset: workstation | server-safe | rds");
         Console.WriteLine("    --modules <id1,id2>      Comma-separated list of module IDs to include");
         Console.WriteLine("    --exclude <id1,id2>      Comma-separated list of module IDs to exclude");
+        Console.WriteLine("    --exclude-path <p1,p2>   Comma-separated folder/file path patterns to whitelist");
         Console.WriteLine("    --all-profiles           Enumerate all user profiles in C:\\Users\\* (Requires Admin)");
         Console.WriteLine("    --min-age <hours>        Safety buffer in hours for temp/cache files (Default: 24)");
         Console.WriteLine("    --server-log-days <days> Retention window in days for IIS/CBS logs (Default: 14)");

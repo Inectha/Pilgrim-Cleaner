@@ -21,10 +21,23 @@ public class Program : Application
     public static int Main(string[] args)
     {
         bool silent = args.Any(a =>
-            a.Equals("--silent", StringComparison.OrdinalIgnoreCase) ||
-            a.Equals("/S", StringComparison.OrdinalIgnoreCase) ||
-            a.Equals("/quiet", StringComparison.OrdinalIgnoreCase) ||
-            a.Equals("/verysilent", StringComparison.OrdinalIgnoreCase));
+        {
+            string clean = a.Trim().Trim('"', '\'');
+            return clean.Equals("--silent", StringComparison.OrdinalIgnoreCase) ||
+                   clean.Equals("-silent", StringComparison.OrdinalIgnoreCase) ||
+                   clean.Equals("/silent", StringComparison.OrdinalIgnoreCase) ||
+                   clean.Equals("/S", StringComparison.OrdinalIgnoreCase) ||
+                   clean.Equals("-s", StringComparison.OrdinalIgnoreCase) ||
+                   clean.Equals("/quiet", StringComparison.OrdinalIgnoreCase) ||
+                   clean.Equals("--quiet", StringComparison.OrdinalIgnoreCase) ||
+                   clean.Equals("/q", StringComparison.OrdinalIgnoreCase) ||
+                   clean.Equals("-q", StringComparison.OrdinalIgnoreCase) ||
+                   clean.Equals("/qn", StringComparison.OrdinalIgnoreCase) ||
+                   clean.Equals("/passive", StringComparison.OrdinalIgnoreCase) ||
+                   clean.Equals("/verysilent", StringComparison.OrdinalIgnoreCase) ||
+                   clean.StartsWith("/S", StringComparison.OrdinalIgnoreCase) ||
+                   clean.StartsWith("--silent", StringComparison.OrdinalIgnoreCase);
+        });
 
         bool isAdmin = IsRunningAsAdministrator();
         string defaultTarget = isAdmin
@@ -112,13 +125,19 @@ public static class InstallerEngine
             onProgress?.Invoke("Registering 'pilgrim' CLI in Windows PATH...", 60);
             try
             {
-                var scope = isAdmin ? EnvironmentVariableTarget.Machine : EnvironmentVariableTarget.User;
-                string currentPath = Environment.GetEnvironmentVariable("Path", scope) ?? string.Empty;
-                var parts = currentPath.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
-                if (!parts.Any(p => p.Equals(targetDir, StringComparison.OrdinalIgnoreCase)))
+                using var envKey = isAdmin
+                    ? Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Session Manager\Environment", writable: true)
+                    : Registry.CurrentUser.OpenSubKey(@"Environment", writable: true);
+
+                if (envKey != null)
                 {
-                    parts.Add(targetDir);
-                    Environment.SetEnvironmentVariable("Path", string.Join(";", parts), scope);
+                    string currentPath = envKey.GetValue("Path", "", RegistryValueOptions.DoNotExpandEnvironmentNames)?.ToString() ?? string.Empty;
+                    var parts = currentPath.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+                    if (!parts.Any(p => p.Equals(targetDir, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        parts.Add(targetDir);
+                        envKey.SetValue("Path", string.Join(";", parts), RegistryValueKind.ExpandString);
+                    }
                 }
             }
             catch { }
@@ -174,15 +193,18 @@ title Uninstalling Pilgrim Cleaner...
 taskkill /f /im PilgrimCleaner.exe 2>nul
 taskkill /f /im pilgrim.exe 2>nul
 taskkill /f /im LuminaCleaner.exe 2>nul
+schtasks /delete /tn ""PilgrimCleanerAutoMaintenance"" /f >nul 2>&1
+schtasks /delete /tn ""LuminaSuiteAutoMaintenance"" /f >nul 2>&1
 timeout /t 1 /nobreak >nul
 reg delete ""{regRoot}\Software\Microsoft\Windows\CurrentVersion\Uninstall\PilgrimCleaner"" /f >nul 2>&1
+del ""%PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs\Pilgrim Cleaner\Pilgrim Cleaner.lnk"" >nul 2>&1
+rd ""%PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs\Pilgrim Cleaner"" >nul 2>&1
 del ""%APPDATA%\Microsoft\Windows\Start Menu\Programs\Pilgrim Cleaner\Pilgrim Cleaner.lnk"" >nul 2>&1
 rd ""%APPDATA%\Microsoft\Windows\Start Menu\Programs\Pilgrim Cleaner"" >nul 2>&1
 del ""%USERPROFILE%\Desktop\Pilgrim Cleaner.lnk"" >nul 2>&1
 cd ""%TEMP%""
 start /b """" cmd /c ""timeout /t 2 /nobreak >nul & rd /s /q """"{targetDir}""""""
-echo Pilgrim Cleaner was successfully uninstalled.
-if not ""%1""==""--silent"" pause";
+exit /b 0";
             File.WriteAllText(uninstallBatch, script);
 
             RegistryKey baseKey = isAdmin ? Registry.LocalMachine : Registry.CurrentUser;
@@ -194,6 +216,9 @@ if not ""%1""==""--silent"" pause";
                 key.SetValue("Publisher", "Pilgrim Software");
                 key.SetValue("DisplayIcon", exePath);
                 key.SetValue("InstallLocation", targetDir);
+                key.SetValue("InstallDate", DateTime.Now.ToString("yyyyMMdd"));
+                key.SetValue("EstimatedSize", 14500, RegistryValueKind.DWord);
+                key.SetValue("WindowsInstaller", 0, RegistryValueKind.DWord);
                 key.SetValue("UninstallString", $"\"{uninstallBatch}\"");
                 key.SetValue("QuietUninstallString", $"\"{uninstallBatch}\" --silent");
                 key.SetValue("NoModify", 1, RegistryValueKind.DWord);

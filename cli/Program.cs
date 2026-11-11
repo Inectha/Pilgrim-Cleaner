@@ -92,6 +92,10 @@ public static class Program
                 "clean" or "purge" => await ExecuteCleanAsync(parsed, cts.Token),
                 "status" or "vitals" or "info" => await ExecuteStatusAsync(parsed),
                 "modules" or "list" => ExecuteModulesList(parsed),
+                "duplicates" or "dupes" => await ExecuteDuplicatesAsync(parsed, cts.Token),
+                "spacelens" or "large" => await ExecuteSpaceLensAsync(parsed, cts.Token),
+                "startup" or "boot" => await ExecuteStartupAsync(parsed, cts.Token),
+                "drivers" or "whql" => await ExecuteDriversAsync(parsed, cts.Token),
                 _ => UnknownCommand(parsed.Command, parsed.UseColor)
             };
         }
@@ -532,8 +536,257 @@ public static class Program
             AllProfiles = opts.AllProfiles,
             AgeSafetyBuffer = TimeSpan.FromHours(opts.MinAgeHours),
             ServerLogRetention = TimeSpan.FromDays(opts.ServerLogDays),
-            Profile = opts.Profile
+            Profile = opts.Profile,
+            ExcludedPaths = opts.ExcludedPaths.ToList()
         };
+    }
+
+    private static async Task<int> ExecuteDuplicatesAsync(CliOptions opts, CancellationToken ct)
+    {
+        var service = new DuplicatesService();
+        var roots = opts.TargetPaths.Count > 0
+            ? opts.TargetPaths
+            : [
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + @"\Downloads",
+                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
+              ];
+
+        var groups = await service.FindDuplicatesAsync(roots, null, ct);
+
+        int recycledFiles = 0;
+        long recycledBytes = 0;
+
+        if (opts.RecycleDuplicates && groups.Count > 0)
+        {
+            foreach (var group in groups)
+            {
+                var ordered = opts.KeepStrategy.Equals("newest", StringComparison.OrdinalIgnoreCase)
+                    ? group.Copies.OrderByDescending(c => c.LastModified).ToList()
+                    : group.Copies.OrderBy(c => c.LastModified).ToList();
+
+                for (int i = 1; i < ordered.Count; i++)
+                {
+                    if (opts.DryRun || service.DeleteFileToRecycleBin(ordered[i].FullPath))
+                    {
+                        recycledFiles++;
+                        recycledBytes += ordered[i].SizeBytes;
+                    }
+                }
+            }
+        }
+
+        long totalWasted = groups.Sum(g => g.WastedBytes);
+        int totalRedundant = groups.Sum(g => g.RedundantCopies);
+
+        if (opts.Json)
+        {
+            Console.WriteLine(JsonSerializer.Serialize(new
+            {
+                command = "duplicates",
+                version = CliVersion,
+                scannedPaths = roots,
+                duplicateGroups = groups.Count,
+                totalRedundantFiles = totalRedundant,
+                totalWastedBytes = totalWasted,
+                formattedWastedBytes = CleanItemModel.FormatBytes(totalWasted),
+                recycled = opts.RecycleDuplicates,
+                keepStrategy = opts.KeepStrategy,
+                recycledFiles,
+                recycledBytes,
+                groups = groups.Select(g => new
+                {
+                    sha256 = g.FileHash,
+                    sizeBytes = g.SizeBytes,
+                    wastedBytes = g.WastedBytes,
+                    copies = g.Copies.Select(c => new
+                    {
+                        fullPath = c.FullPath,
+                        lastModified = c.LastModified,
+                        isOriginal = c.IsOriginal
+                    })
+                })
+            }, JsonOptions));
+            return 0;
+        }
+
+        WriteColored("==================================================================================\n", ConsoleColor.Cyan, opts.UseColor);
+        WriteColored($"  PILGRIM CLEANER CLI v{CliVersion} — SHA-256 DUPLICATE FILE AUDITOR\n", ConsoleColor.Cyan, opts.UseColor);
+        WriteColored("==================================================================================\n", ConsoleColor.Cyan, opts.UseColor);
+        Console.WriteLine($"  Target Paths     : {string.Join(", ", roots)}");
+        Console.WriteLine($"  Duplicate Groups : {groups.Count:N0} ({totalRedundant:N0} redundant copies | {CleanItemModel.FormatBytes(totalWasted)} wasted)");
+        Console.WriteLine("  --------------------------------------------------------------------------------");
+        foreach (var g in groups.Take(25))
+        {
+            WriteColored($"  [SHA256: {g.ShortHash}] {g.SampleFileName} ({g.TotalCopies} copies, {g.FormattedWastedBytes} wasted)\n", ConsoleColor.White, opts.UseColor);
+            foreach (var c in g.Copies)
+            {
+                Console.WriteLine($"      {(c.IsOriginal ? "[KEEP]" : "[DUPE]")} {c.FullPath} ({c.FormattedDate})");
+            }
+        }
+        if (opts.RecycleDuplicates)
+        {
+            WriteColored($"\n  [RECYCLED] Sent {recycledFiles:N0} duplicate files ({CleanItemModel.FormatBytes(recycledBytes)}) to Windows Recycle Bin (kept {opts.KeepStrategy}).\n", ConsoleColor.Green, opts.UseColor);
+        }
+        return 0;
+    }
+
+    private static async Task<int> ExecuteSpaceLensAsync(CliOptions opts, CancellationToken ct)
+    {
+        var service = new SpaceLensService();
+        var roots = opts.TargetPaths.Count > 0
+            ? opts.TargetPaths
+            : [
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + @"\Downloads",
+                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                Environment.GetFolderPath(Environment.SpecialFolder.MyVideos),
+                Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
+              ];
+
+        long minBytes = (long)(opts.MinSizeMb * 1024.0 * 1024.0);
+        var items = (await service.ScanLibrariesAsync(roots, minBytes, null, ct))
+            .OrderByDescending(i => i.SizeBytes)
+            .ToList();
+
+        long totalBytes = items.Sum(i => i.SizeBytes);
+
+        if (opts.Json)
+        {
+            Console.WriteLine(JsonSerializer.Serialize(new
+            {
+                command = "spacelens",
+                version = CliVersion,
+                scannedPaths = roots,
+                minSizeMb = opts.MinSizeMb,
+                filesFound = items.Count,
+                totalBytes,
+                formattedTotalBytes = CleanItemModel.FormatBytes(totalBytes),
+                items = items.Take(100).Select(i => new
+                {
+                    fileName = i.FileName,
+                    fullPath = i.FullPath,
+                    sizeBytes = i.SizeBytes,
+                    formattedSize = i.FormattedSize,
+                    category = i.FileCategory,
+                    ageDays = i.AgeDays,
+                    lastModified = i.LastModified
+                })
+            }, JsonOptions));
+            return 0;
+        }
+
+        WriteColored("==================================================================================\n", ConsoleColor.Cyan, opts.UseColor);
+        WriteColored($"  PILGRIM CLEANER CLI v{CliVersion} — SPACE LENS LARGE FILE EXPLORER (>={opts.MinSizeMb:N0} MB)\n", ConsoleColor.Cyan, opts.UseColor);
+        WriteColored("==================================================================================\n", ConsoleColor.Cyan, opts.UseColor);
+        Console.WriteLine($"  {"Size",14}  {"Age (Days)",10}  {"Category",-20}  {"Full Path"}");
+        Console.WriteLine("  --------------------------------------------------------------------------------");
+        foreach (var item in items.Take(30))
+        {
+            Console.WriteLine($"  {item.FormattedSize,14}  {item.AgeDays,10:N0}  {Truncate(item.FileCategory, 19),-20}  {item.FullPath}");
+        }
+        Console.WriteLine("  --------------------------------------------------------------------------------");
+        WriteColored($"  Found {items.Count:N0} large files totaling {CleanItemModel.FormatBytes(totalBytes)}.\n", ConsoleColor.Green, opts.UseColor);
+        return 0;
+    }
+
+    private static async Task<int> ExecuteStartupAsync(CliOptions opts, CancellationToken ct)
+    {
+        var service = new StartupService();
+        var items = await service.GetStartupItemsAsync(ct);
+
+        if (opts.Json)
+        {
+            Console.WriteLine(JsonSerializer.Serialize(new
+            {
+                command = "startup",
+                version = CliVersion,
+                totalItems = items.Count,
+                enabledItems = items.Count(i => i.IsEnabled),
+                items = items.Select(i => new
+                {
+                    name = i.Name,
+                    publisher = i.Publisher,
+                    source = i.SourceType,
+                    enabled = i.IsEnabled,
+                    impact = i.StartupImpact,
+                    command = i.Command
+                })
+            }, JsonOptions));
+            return 0;
+        }
+
+        WriteColored("==================================================================================\n", ConsoleColor.Cyan, opts.UseColor);
+        WriteColored($"  PILGRIM CLEANER CLI v{CliVersion} — STARTUP BOOT ACCELERATOR AUDIT\n", ConsoleColor.Cyan, opts.UseColor);
+        WriteColored("==================================================================================\n", ConsoleColor.Cyan, opts.UseColor);
+        Console.WriteLine($"  {"State",-10} {"Impact",-10} {"Source",-26} {"Name"}");
+        Console.WriteLine("  --------------------------------------------------------------------------------");
+        foreach (var i in items)
+        {
+            string state = i.IsEnabled ? "[ENABLED]" : "[DISABLED]";
+            ConsoleColor c = i.IsEnabled ? (i.StartupImpact == "High" ? ConsoleColor.Yellow : ConsoleColor.Green) : ConsoleColor.DarkGray;
+            WriteColored($"  {state,-10} {i.StartupImpact,-10} {Truncate(i.SourceType, 25),-26} {i.Name}\n", c, opts.UseColor);
+        }
+        return 0;
+    }
+
+    private static async Task<int> ExecuteDriversAsync(CliOptions opts, CancellationToken ct)
+    {
+        var service = new DriverHealthService();
+        var drivers = await service.GetInstalledDriversAsync(ct);
+        List<DriverUpdateModel> updates = [];
+
+        if (opts.CheckWhql)
+        {
+            updates = await service.CheckWhqlUpdatesAsync(ct);
+            service.CorrelateDriversWithUpdates(drivers, updates);
+        }
+
+        if (opts.Json)
+        {
+            Console.WriteLine(JsonSerializer.Serialize(new
+            {
+                command = "drivers",
+                version = CliVersion,
+                totalDrivers = drivers.Count,
+                whqlCertifiedCount = drivers.Count(d => d.IsWhqlCertified),
+                pendingWhqlUpdates = updates.Count,
+                updates = updates.Select(u => new
+                {
+                    title = u.Title,
+                    provider = u.DriverProvider,
+                    version = u.DriverVersion,
+                    releaseDate = u.DriverVerDate
+                }),
+                drivers = drivers.Select(d => new
+                {
+                    deviceName = d.DeviceName,
+                    category = d.Category.ToString(),
+                    version = d.DriverVersion,
+                    date = d.DriverDate,
+                    signer = d.Signer,
+                    whqlCertified = d.IsWhqlCertified,
+                    hasPendingUpdate = d.HasPendingUpdate
+                })
+            }, JsonOptions));
+            return 0;
+        }
+
+        WriteColored("==================================================================================\n", ConsoleColor.Cyan, opts.UseColor);
+        WriteColored($"  PILGRIM CLEANER CLI v{CliVersion} — CERTIFIED WHQL DRIVER INVENTORY\n", ConsoleColor.Cyan, opts.UseColor);
+        WriteColored("==================================================================================\n", ConsoleColor.Cyan, opts.UseColor);
+        Console.WriteLine($"  {"Category",-12} {"WHQL",-6} {"Version",-18} {"Date",-12} {"Device Name"}");
+        Console.WriteLine("  --------------------------------------------------------------------------------");
+        foreach (var d in drivers.Take(40))
+        {
+            string whql = d.IsWhqlCertified ? "Yes" : "No";
+            Console.WriteLine($"  {d.Category,-12} {whql,-6} {Truncate(d.DriverVersion, 17),-18} {Truncate(d.DriverDate, 11),-12} {d.DeviceName}");
+        }
+        if (opts.CheckWhql)
+        {
+            Console.WriteLine("  --------------------------------------------------------------------------------");
+            WriteColored($"  Pending Official Microsoft WHQL Driver Updates: {updates.Count}\n", updates.Count > 0 ? ConsoleColor.Yellow : ConsoleColor.Green, opts.UseColor);
+        }
+        return 0;
     }
 
     private static bool ConfigureModules(EngineService engine, CliOptions opts, EngineOptions engineOptions, out string? error)
@@ -814,7 +1067,59 @@ public static class Program
                     options.LogFile = args[++i];
                     break;
 
+                case "--exclude-path":
+                    if (i + 1 >= args.Length)
+                    {
+                        error = "Missing comma-separated path patterns for --exclude-path.";
+                        return false;
+                    }
+                    foreach (var p in args[++i].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                    {
+                        options.ExcludedPaths.Add(p);
+                    }
+                    break;
+
+                case "--path":
+                    if (i + 1 >= args.Length)
+                    {
+                        error = "Missing directory path for --path.";
+                        return false;
+                    }
+                    options.TargetPaths.Add(args[++i]);
+                    break;
+
+                case "--keep":
+                    if (i + 1 >= args.Length)
+                    {
+                        error = "Missing value for --keep (expected: oldest or newest).";
+                        return false;
+                    }
+                    options.KeepStrategy = args[++i].Trim().ToLowerInvariant();
+                    break;
+
+                case "--recycle":
+                    options.RecycleDuplicates = true;
+                    break;
+
+                case "--min-size-mb":
+                    if (i + 1 >= args.Length || !double.TryParse(args[++i], out double minMb) || minMb <= 0)
+                    {
+                        error = "Invalid value for --min-size-mb. Expected positive number in MB (e.g. 50).";
+                        return false;
+                    }
+                    options.MinSizeMb = minMb;
+                    break;
+
+                case "--check-whql":
+                    options.CheckWhql = true;
+                    break;
+
                 default:
+                    if (!arg.StartsWith('-') && Directory.Exists(arg))
+                    {
+                        options.TargetPaths.Add(arg);
+                        break;
+                    }
                     error = $"Unrecognized option '{arg}'.";
                     return false;
             }
@@ -825,7 +1130,7 @@ public static class Program
 
     private static int UnknownCommand(string cmd, bool useColor)
     {
-        WriteError($"Unknown command '{cmd}'. Valid commands: audit, clean, status, modules, man.", useColor);
+        WriteError($"Unknown command '{cmd}'. Valid commands: audit, clean, status, modules, duplicates, spacelens, startup, drivers, man.", useColor);
         return 4;
     }
 
@@ -895,5 +1200,11 @@ public static class Program
         public bool UseColor { get; set; } = true;
         public double? FailThresholdGb { get; set; }
         public string? LogFile { get; set; }
+        public List<string> ExcludedPaths { get; } = [];
+        public List<string> TargetPaths { get; } = [];
+        public string KeepStrategy { get; set; } = "oldest";
+        public bool RecycleDuplicates { get; set; }
+        public double MinSizeMb { get; set; } = 50.0;
+        public bool CheckWhql { get; set; }
     }
 }

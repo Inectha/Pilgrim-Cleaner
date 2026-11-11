@@ -23,10 +23,32 @@ namespace LuminaCleaner.Services;
 
 public class SchedulerService : ISchedulerService
 {
+    private const string LegacyTaskName = "LuminaSuiteAutoMaintenance";
+
+    private static void RemoveLegacyTaskIfPresent()
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "schtasks.exe",
+                Arguments = $"/delete /tn \"{LegacyTaskName}\" /f",
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+            using var proc = Process.Start(psi);
+            proc?.WaitForExit(2000);
+        }
+        catch { }
+    }
+
     public bool IsTaskScheduled(string taskName = "PilgrimCleanerAutoMaintenance")
     {
         try
         {
+            RemoveLegacyTaskIfPresent();
             var psi = new ProcessStartInfo
             {
                 FileName = "schtasks.exe",
@@ -133,7 +155,10 @@ public class SchedulerService : ISchedulerService
 
     public ScheduledTaskStatusModel GetTaskStatusInfo(string taskName = "PilgrimCleanerAutoMaintenance")
     {
-        var model = new ScheduledTaskStatusModel();
+        var model = new ScheduledTaskStatusModel
+        {
+            TaskPath = $"\\{taskName}"
+        };
         try
         {
             var psi = new ProcessStartInfo

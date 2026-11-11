@@ -39,5 +39,5 @@ public partial class ScheduledTaskStatusModel : ObservableObject
     private string _scheduleDetails = "Weekly on Sunday at 02:00 AM";
 
     [ObservableProperty]
-    private string _taskPath = @"\LuminaSuiteAutoMaintenance";
+    private string _taskPath = @"\PilgrimCleanerAutoMaintenance";
 }

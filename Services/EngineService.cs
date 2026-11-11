@@ -156,6 +156,21 @@ public class EngineService : IEngineService
             var result = await module.ScanAsync(options, throttler, ct);
             throttler.Flush();
 
+            if (options.ExcludedPaths.Count > 0)
+            {
+                foreach (var item in module.DiscoveredItems)
+                {
+                    if (item.Status == CleanItemStatus.Scanned &&
+                        options.ExcludedPaths.Any(ex => item.FullPath.Contains(ex, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        item.IsSelected = false;
+                        item.Status = CleanItemStatus.SkippedWhitelisted;
+                        item.SkipReason = "Excluded by custom path whitelist (--exclude-path)";
+                    }
+                }
+                module.UpdateSelectionMetrics();
+            }
+
             runningTotalBytes += result.TotalBytes;
             runningTotalItems += result.Items.Count(i => i.Status == CleanItemStatus.Scanned);
             runningSkippedBytes += result.SkippedBytes;

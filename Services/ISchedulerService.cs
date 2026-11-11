@@ -20,12 +20,12 @@ namespace LuminaCleaner.Services;
 
 public interface ISchedulerService
 {
-    bool IsTaskScheduled(string taskName = "LuminaSuiteAutoMaintenance");
-    bool RegisterWeeklyMaintenanceTask(string exePath, string taskName = "LuminaSuiteAutoMaintenance");
-    bool RegisterCustomMaintenanceTask(string exePath, string scheduleType, string dayOfWeek, string time, string taskName = "LuminaSuiteAutoMaintenance");
-    bool RemoveMaintenanceTask(string taskName = "LuminaSuiteAutoMaintenance");
-    ScheduledTaskStatusModel GetTaskStatusInfo(string taskName = "LuminaSuiteAutoMaintenance");
-    bool RunTaskImmediately(string taskName = "LuminaSuiteAutoMaintenance");
+    bool IsTaskScheduled(string taskName = "PilgrimCleanerAutoMaintenance");
+    bool RegisterWeeklyMaintenanceTask(string exePath, string taskName = "PilgrimCleanerAutoMaintenance");
+    bool RegisterCustomMaintenanceTask(string exePath, string scheduleType, string dayOfWeek, string time, string taskName = "PilgrimCleanerAutoMaintenance");
+    bool RemoveMaintenanceTask(string taskName = "PilgrimCleanerAutoMaintenance");
+    ScheduledTaskStatusModel GetTaskStatusInfo(string taskName = "PilgrimCleanerAutoMaintenance");
+    bool RunTaskImmediately(string taskName = "PilgrimCleanerAutoMaintenance");
     void OpenWindowsTaskScheduler();
     void ShowWindowsNotification(string title, string message);
 }

@@ -15,6 +15,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 using System;
+using System.Collections.Generic;
 
 namespace LuminaCleaner.Models;
 
@@ -58,4 +59,9 @@ public class EngineOptions
     /// Active execution profile preset (Default, Workstation, ServerSafe, Rds).
     /// </summary>
     public CleanupProfile Profile { get; set; } = CleanupProfile.Default;
+
+    /// <summary>
+    /// Optional custom path/substring exclusions (e.g. from --exclude-path).
+    /// </summary>
+    public List<string> ExcludedPaths { get; set; } = [];
 }
