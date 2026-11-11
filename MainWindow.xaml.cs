@@ -30,6 +30,7 @@ public partial class MainWindow : FluentWindow
     public MainWindow()
     {
         InitializeComponent();
+        Title = $"Pilgrim Cleaner {AppInfo.ShortVersion}";
         SystemThemeWatcher.Watch(this);
         DataContext = new MainViewModel();
     }
