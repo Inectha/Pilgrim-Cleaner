@@ -7,6 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased] — 1.2.0
+
+### Security
+- **Junction / symlink protection for all cleanup modules (`Interop/SafeFileOps`):**
+  - A standard user could point a scanned folder (e.g. a browser cache) at another location with `mklink /J` and make an elevated or SYSTEM cleanup delete files there.
+  - Scan roots that are, or sit below, a junction/symlink not created by SYSTEM, Administrators or TrustedInstaller are now refused.
+  - Every file is deleted through a handle after verifying it still lives where the scan found it, which also blocks swapping a folder for a junction after the scan.
+- **App Manager:**
+  - Uninstall commands from `HKEY_CURRENT_USER` are no longer started "as administrator"; they run as the user, and are refused when Pilgrim Cleaner itself runs elevated.
+  - Leftover folders are only offered once the app is really gone from the registry, never pre-selected while it is still installed, and never include shared folders (`Common Files`, `Microsoft`, …), folders used by other apps, or registry values containing path tricks.
+- **Windows tools are started from System32 by full path:** `powershell.exe`, `schtasks.exe`, `dism.exe`, `explorer.exe` and `taskschd.msc`, so a planted copy in the working directory cannot run as SYSTEM.
+- **Driver install fallback:** update titles are passed to PowerShell as Base64 via `-EncodedCommand` and can no longer inject code.
+
+### Fixed
+- **Duplicates:** overlapping scan folders could make a file a "duplicate" of itself and recycle the only copy. Paths are now de-duplicated, and a copy is only removed when a different kept file exists.
+- **Recycle Bin:**
+  - On network shares and USB drives, "Move to Recycle Bin" silently deleted permanently; those paths are now skipped, and the GUI warns before any permanent delete.
+  - The Recycle Bin size was always reported as 0 on 64-bit Windows (wrong struct layout).
+- **Uninstall:**
+  - A cancelled or failed uninstall was reported as successful; exit codes are now checked.
+  - The old `Uninstall.bat` split the install path at spaces and never removed the install folder.
+- **CLI:**
+  - `clean --json` no longer deletes files without `--force`.
+  - `duplicates --recycle` now asks for confirmation.
+  - An invalid `--keep` value is now an error.
+- `--dry-run` no longer removes empty folders in the Delivery Optimization module.
+- The PowerShell driver-install fallback could never run (syntax error).
+
+### Changed
+- **.NET 10 LTS:** all projects target `net10.0-windows` (.NET 8 reached end of support on 10 Nov 2026). Requires the .NET 10 Desktop Runtime.
+- **New installer (Inno Setup):**
+  - Machine-wide only, in `C:\Program Files\Pilgrim Cleaner`.
+  - Checks for the .NET 10 Desktop Runtime.
+  - Adds `pilgrim` to the system PATH and removes it again on uninstall.
+  - Removes the background maintenance task on uninstall.
+  - Silent install: `/VERYSILENT /SUPPRESSMSGBOXES /NORESTART`.
+  - Replaces the previous custom setup wizard and the `Install.bat` / `Install-PilgrimCleaner.ps1` scripts.
+- **Winget:** the manifest now uses the Inno Setup installer with machine scope and depends on `Microsoft.DotNet.DesktopRuntime.10`.
+- **Version number in one place** (`Directory.Build.props`, overridden by the release tag). The GUI badge, About page and `pilgrim` read it from the build.
+
+### Added
+- **CI on every pull request:** builds GUI, CLI and tests, runs the test suite, and builds the installer.
+- **Automated releases:** pushing a `vX.Y.Z` tag builds, tests and publishes `PilgrimCleanerSetup.exe`, the portable ZIP and `SHA256SUMS.txt`, plus ready-to-submit winget manifests.
+- **`AGENTS.md`:** shared project and safety rules for contributors and AI coding agents (Antigravity, Claude Code, Cursor).
+- **9 new tests (30 in total)**, including tests that plant real junctions and verify nothing outside the scanned folder is deleted.
+
+### Upgrade notes
+- Installing 1.2.0 over a machine-wide 1.1 install replaces it and removes the old uninstall entry. A **per-user** 1.1 install (`%LOCALAPPDATA%\Programs\Pilgrim Cleaner`) is not touched; uninstall it first via *Settings → Apps*.
+
+---
+
 ## [1.1.0] — 2026-11-10
 
 ### Added
