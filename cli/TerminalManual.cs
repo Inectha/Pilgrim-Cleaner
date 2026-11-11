@@ -39,6 +39,26 @@ public static class TerminalManual
                 RenderProfiles(useColor);
                 return 0;
 
+            case "duplicates":
+            case "duplicate":
+            case "dupes":
+                RenderDuplicates(useColor);
+                return 0;
+
+            case "spacelens":
+            case "space":
+            case "large":
+                RenderSpaceLens(useColor);
+                return 0;
+
+            case "tools":
+            case "utilities":
+            case "startup":
+            case "drivers":
+            case "whql":
+                RenderTools(useColor);
+                return 0;
+
             case "security":
             case "safety":
             case "edr":
@@ -60,7 +80,7 @@ public static class TerminalManual
                 return 0;
 
             default:
-                WriteLineColored($"Unknown manual topic '{topic}'. Available topics: overview, profiles, security, automation, exitcodes", ConsoleColor.Yellow, useColor);
+                WriteLineColored($"Unknown manual topic '{topic}'. Available topics: overview, profiles, duplicates, spacelens, tools, security, automation, exitcodes", ConsoleColor.Yellow, useColor);
                 Console.WriteLine();
                 RenderOverview(useColor);
                 return 4;
@@ -126,7 +146,10 @@ public static class TerminalManual
         WriteSection("MANUAL TOPICS", useColor);
         Console.WriteLine("    Run 'pilgrim man <topic>' for detailed administrator documentation:");
         Console.WriteLine("      pilgrim man profiles     Preset profiles for Windows Server, RDS & Workstations");
-        Console.WriteLine("      pilgrim man security     EDR/Defender, AppLocker/WDAC & SYSTEM context details");
+        Console.WriteLine("      pilgrim man duplicates   Two-tier SHA-256 duplicate auditing, recycling & keep strategies");
+        Console.WriteLine("      pilgrim man spacelens    Large and ancient user files library exploration");
+        Console.WriteLine("      pilgrim man tools        Startup accelerator and certified WHQL driver health tools");
+        Console.WriteLine("      pilgrim man security     EDR/Defender, AppLocker/WDAC, NTFS junctions & SYSTEM context");
         Console.WriteLine("      pilgrim man automation   PowerShell, Intune, NinjaOne/Datto RMM script examples");
         Console.WriteLine("      pilgrim man exitcodes    Standardized exit codes for scripting and monitoring");
     }
@@ -154,6 +177,94 @@ public static class TerminalManual
         Console.WriteLine("       * Modules:      system_temp, crash_dumps, browser_cache, recycle_bin,");
         Console.WriteLine("                       delivery_optimization, developer_caches");
         Console.WriteLine("       * Example:      pilgrim clean --profile workstation --force");
+    }
+
+    private static void RenderDuplicates(bool useColor)
+    {
+        WriteHeader("PILGRIM-DUPLICATES(7)     Pilgrim Cleaner Sysadmin Manual     PILGRIM-DUPLICATES(7)", useColor);
+        Console.WriteLine();
+        WriteSection("CRYPTOGRAPHIC SHA-256 DUPLICATE FINDER", useColor);
+        Console.WriteLine("    pilgrim duplicates [<path>...] [--keep oldest|newest] [--recycle] [--force] [--dry-run] [--json]");
+        Console.WriteLine();
+        Console.WriteLine("    DESCRIPTION:");
+        Console.WriteLine("      Scans user libraries or custom target folders for byte-identical files using a high-");
+        Console.WriteLine("      speed two-tier algorithm:");
+        Console.WriteLine("        1. Size Partitioning: Fast group-by exact byte length.");
+        Console.WriteLine("        2. Prefix Verification: 4 KB head-byte fast-check.");
+        Console.WriteLine("        3. Cryptographic SHA-256: Only files matching steps 1 & 2 are hashed fully.");
+        Console.WriteLine();
+        Console.WriteLine("    DEFAULT TARGETS:");
+        Console.WriteLine("      If no paths are passed, scans: %USERPROFILE%\\Downloads, Documents, and Desktop.");
+        Console.WriteLine("      Custom targets can be specified as positional arguments: pilgrim duplicates D:\\Data E:\\Photos");
+        Console.WriteLine();
+        Console.WriteLine("    OPTIONS:");
+        Console.WriteLine("      --keep <oldest|newest>  Preserve the oldest (default) or newest modified file.");
+        Console.WriteLine("      --recycle               Send redundant copies to the Windows Recycle Bin.");
+        Console.WriteLine("      --dry-run               Simulate duplicate recycling without moving files.");
+        Console.WriteLine("      --force, -y             Bypass interactive confirmation prompt [y/N].");
+        Console.WriteLine("                              Required for unattended scripts or when using --json.");
+        Console.WriteLine("      --json                  Emit machine-readable JSON structure with SHA-256 hashes.");
+        Console.WriteLine();
+        Console.WriteLine("    SAFETY GUARDRAILS:");
+        Console.WriteLine("      * Overlapping Roots:    Nested or redundant roots (e.g. D:\\Data and D:\\Data\\Sub)");
+        Console.WriteLine("                              are de-duplicated so a file is never paired with itself.");
+        Console.WriteLine("      * Separate File Check:  A copy is only recycled if the kept file is physically verified");
+        Console.WriteLine("                              to exist, differ in path, and match in exact byte length.");
+        Console.WriteLine("      * Network/Removable:    Refuses recycling on drives lacking a Windows Recycle Bin");
+        Console.WriteLine("                              to prevent accidental permanent deletion.");
+        Console.WriteLine();
+        Console.WriteLine("    EXAMPLES:");
+        Console.WriteLine("      pilgrim duplicates");
+        Console.WriteLine("      pilgrim duplicates \"D:\\Media\\Photos\" --keep oldest --recycle");
+        Console.WriteLine("      pilgrim duplicates \"C:\\Shares\\Data\" --recycle --dry-run");
+        Console.WriteLine("      pilgrim duplicates \"D:\\Backup\" --keep newest --recycle --force --json");
+    }
+
+    private static void RenderSpaceLens(bool useColor)
+    {
+        WriteHeader("PILGRIM-SPACELENS(7)      Pilgrim Cleaner Sysadmin Manual      PILGRIM-SPACELENS(7)", useColor);
+        Console.WriteLine();
+        WriteSection("LARGE & ANCIENT USER FILES EXPLORER", useColor);
+        Console.WriteLine("    pilgrim spacelens [<path>...] [--min-size-mb <N>] [--json]");
+        Console.WriteLine();
+        Console.WriteLine("    DESCRIPTION:");
+        Console.WriteLine("      Catalogs storage across user libraries or custom target folders to identify disk-space");
+        Console.WriteLine("      hogs, stale video files, ISO images, virtual disks, and installer archives.");
+        Console.WriteLine();
+        Console.WriteLine("    DEFAULT TARGETS:");
+        Console.WriteLine("      If no paths are passed, scans: %USERPROFILE%\\Downloads, Documents, Videos, and Desktop.");
+        Console.WriteLine();
+        Console.WriteLine("    OPTIONS:");
+        Console.WriteLine("      --min-size-mb <N>       Minimum file size threshold in Megabytes (Default: 50 MB).");
+        Console.WriteLine("      --json                  Emit JSON array sorted by size in descending order.");
+        Console.WriteLine();
+        Console.WriteLine("    EXAMPLES:");
+        Console.WriteLine("      pilgrim spacelens");
+        Console.WriteLine("      pilgrim spacelens \"D:\\VirtualMachines\" --min-size-mb 1024");
+        Console.WriteLine("      pilgrim spacelens --min-size-mb 500 --json");
+    }
+
+    private static void RenderTools(bool useColor)
+    {
+        WriteHeader("PILGRIM-TOOLS(7)          Pilgrim Cleaner Sysadmin Manual          PILGRIM-TOOLS(7)", useColor);
+        Console.WriteLine();
+        WriteSection("SYSADMIN UTILITIES: STARTUP & WHQL DRIVERS", useColor);
+        Console.WriteLine("    1. STARTUP ACCELERATOR (pilgrim startup [--json])");
+        Console.WriteLine("       Audits all startup applications across HKLM/HKCU StartupApproved registry keys");
+        Console.WriteLine("       and startup folders. Displays application names, boot impact ratings (High,");
+        Console.WriteLine("       Medium, Low), target executables, and enabled/disabled binary status.");
+        Console.WriteLine();
+        Console.WriteLine("    2. CERTIFIED WHQL DRIVER HEALTH (pilgrim drivers [--check-whql] [--json])");
+        Console.WriteLine("       Catalogs installed hardware devices across Graphics, Audio, Network, Storage,");
+        Console.WriteLine("       and System classes, verifying WHQL compliance via Win32_PnPSignedDriver.");
+        Console.WriteLine("       When --check-whql is passed, queries the native Microsoft Windows Update API");
+        Console.WriteLine("       (WUApiLib) for official certified driver updates.");
+        Console.WriteLine();
+        Console.WriteLine("    EXAMPLES:");
+        Console.WriteLine("      pilgrim startup");
+        Console.WriteLine("      pilgrim startup --json");
+        Console.WriteLine("      pilgrim drivers");
+        Console.WriteLine("      pilgrim drivers --check-whql");
     }
 
     private static void RenderSecurity(bool useColor)
