@@ -33,25 +33,26 @@ I decided to share this utility publicly on GitHub under the GPLv3 license for a
 
 <!-- To add your own screenshots, place image files in a `docs/screenshots/` folder and link them here, or drag & drop images directly into GitHub issues/releases. -->
 
-<img width="1240" height="820" alt="image" src="https://github.com/user-attachments/assets/17147b33-d366-4677-9ac8-f75d5b3dc8c3" />
+<img width="1240" height="820" alt="Screenshot 2026-11-14 131506" src="https://github.com/user-attachments/assets/b9258132-ecdd-42b2-9f19-29e4e9036071" />
 <br><br>
-<img width="1240" height="820" alt="image" src="https://github.com/user-attachments/assets/5f0778c2-f8fc-4320-a79a-ea522e07c2b7" />
+<img width="1240" height="820" alt="Screenshot 2026-11-14 131549" src="https://github.com/user-attachments/assets/6853411d-a740-4901-8d57-e010f62cf848" />
 <br><br>
-<img width="1240" height="820" alt="image" src="https://github.com/user-attachments/assets/69ddd250-b14f-466d-aa63-d6e712a9c87d" />
+<img width="1240" height="820" alt="Screenshot 2026-11-14 131635" src="https://github.com/user-attachments/assets/8efe4508-93c9-4438-967e-3660b096a0de" />
 <br><br>
-<img width="1240" height="820" alt="image" src="https://github.com/user-attachments/assets/5a7b140a-a96f-4f1a-8155-b3671fdc18c6" />
+<img width="1240" height="820" alt="Screenshot 2026-11-14 131657" src="https://github.com/user-attachments/assets/73f07b77-b0ab-4627-8f14-7d9a8d64265c" />
 <br><br>
-<img width="1240" height="820" alt="image" src="https://github.com/user-attachments/assets/9b83c255-3741-4b75-ad0d-756792c26dd5" />
+<img width="1240" height="820" alt="Screenshot 2026-11-14 131745" src="https://github.com/user-attachments/assets/24c8abc2-da46-44b6-ab75-948f21d18ffc" />
 <br><br>
-<img width="1240" height="820" alt="image" src="https://github.com/user-attachments/assets/b1037804-135f-44a2-9b94-7fa37201ddd0" />
+<img width="1240" height="820" alt="Screenshot 2026-11-14 132000" src="https://github.com/user-attachments/assets/301ddfd6-ebb5-41e5-a358-74e24be4c25f" />
 <br><br>
-<img width="1240" height="820" alt="image" src="https://github.com/user-attachments/assets/5a1a9d75-8b76-45ac-82a4-95712ca8907b" />
+<img width="1240" height="820" alt="Screenshot 2026-11-14 132027" src="https://github.com/user-attachments/assets/56232151-e6d7-4892-a821-3922f4a06903" />
 <br><br>
-<img width="1240" height="820" alt="image" src="https://github.com/user-attachments/assets/c3307e8a-a922-4254-ae9a-f041322f9f6b" />
+<img width="1240" height="820" alt="Screenshot 2026-11-14 132050" src="https://github.com/user-attachments/assets/177e863f-b473-47d1-b58d-6c9241251d98" />
 <br><br>
-<img width="1240" height="820" alt="image" src="https://github.com/user-attachments/assets/a1456d43-4ce7-424b-9f6f-91555b218ad4" />
+<img width="1240" height="820" alt="Screenshot 2026-11-14 132104" src="https://github.com/user-attachments/assets/a6d5afb5-de06-4d61-a0f3-74df701b7ee5" />
 <br><br>
-<img width="1240" height="820" alt="image" src="https://github.com/user-attachments/assets/c0a648e3-64ee-426a-8e4c-70d37a4c0d17" />
+<img width="1240" height="1009" alt="Screenshot 2026-11-14 132126" src="https://github.com/user-attachments/assets/7056694d-3a84-4a5a-9860-5dd3f90f02c8" />
+<br><br>
 
 ---
 
