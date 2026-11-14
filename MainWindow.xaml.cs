@@ -32,11 +32,28 @@ public partial class MainWindow : FluentWindow
         InitializeComponent();
         Title = $"Pilgrim Cleaner {AppInfo.ShortVersion}";
         SystemThemeWatcher.Watch(this);
-        DataContext = new MainViewModel();
+        var vm = new MainViewModel();
+        DataContext = vm;
+
+        Loaded += async (_, _) =>
+        {
+            await vm.CheckForUpdatesCommand.ExecuteAsync(null);
+        };
     }
 
     private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        if (e.OriginalSource is DependencyObject source)
+        {
+            for (DependencyObject? current = source; current != null; current = System.Windows.Media.VisualTreeHelper.GetParent(current))
+            {
+                if (current is System.Windows.Controls.Primitives.ButtonBase)
+                {
+                    return;
+                }
+            }
+        }
+
         if (e.ClickCount == 2)
         {
             WindowState = WindowState == WindowState.Maximized

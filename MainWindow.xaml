@@ -10,6 +10,7 @@
         xmlns:models="clr-namespace:LuminaCleaner.Models"
         mc:Ignorable="d"
         Title="Pilgrim Cleaner"
+        Icon="pack://application:,,,/Assets/app.ico"
         Height="820" Width="1240"
         MinHeight="700" MinWidth="1020"
         WindowStartupLocation="CenterScreen"
@@ -45,19 +46,34 @@
                              Height="46"
                              CloseWindowByDoubleClickOnIcon="False" />
 
-                <!-- Single Brand Header Top-Left: Logo + Pilgrim Cleaner -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0" IsHitTestVisible="False">
-                    <!-- Stylized High-Contrast Mathematical Vector Logo -->
-                    <ctrl:PilgrimLogoControl Width="28" Height="28" ShowSquircleBackground="True" GlowOpacity="0.85" Margin="0,0,10,0" VerticalAlignment="Center">
-                        <ctrl:PilgrimLogoControl.Effect>
-                            <DropShadowEffect BlurRadius="12" Color="#00E5FF" Opacity="0.55" ShadowDepth="0" />
-                        </ctrl:PilgrimLogoControl.Effect>
-                    </ctrl:PilgrimLogoControl>
-                    <TextBlock Text="Pilgrim" FontWeight="Bold" FontSize="16" Foreground="#FFFFFF" VerticalAlignment="Center" />
-                    <TextBlock Text="Cleaner" FontWeight="Light" FontSize="16" Foreground="#00E5FF" Margin="5,0,0,0" VerticalAlignment="Center" />
-                    <Border Background="#14263C" BorderBrush="#00E5FF" BorderThickness="1" CornerRadius="4" Padding="6,1.5" Margin="10,0,0,0" VerticalAlignment="Center">
-                        <TextBlock Text="{x:Static local:AppInfo.ShortVersion}" FontSize="13" FontWeight="Bold" Foreground="#00E5FF" />
-                    </Border>
+                <!-- Single Brand Header Top-Left: Logo + Pilgrim Cleaner + In-App Updater Pill -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" IsHitTestVisible="False">
+                        <!-- Pilgrim Cleaner Material 3 Pcl Brand Icon -->
+                        <ctrl:PilgrimLogoControl Width="28" Height="28" ShowSquircleBackground="True" GlowOpacity="0.85" Margin="0,0,10,0" VerticalAlignment="Center" />
+                        <TextBlock Text="Pilgrim" FontWeight="Bold" FontSize="16" Foreground="#FFFFFF" VerticalAlignment="Center" />
+                        <TextBlock Text="Cleaner" FontWeight="Light" FontSize="16" Foreground="#00E5FF" Margin="5,0,0,0" VerticalAlignment="Center" />
+                        <Border Background="#14263C" BorderBrush="#00E5FF" BorderThickness="1" CornerRadius="4" Padding="6,1.5" Margin="10,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="{x:Static local:AppInfo.ShortVersion}" FontSize="13" FontWeight="Bold" Foreground="#00E5FF" />
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Interactive One-Click Update & Restart Pill -->
+                    <Button Command="{Binding InstallUpdateCommand}"
+                            Visibility="{Binding IsUpdateAvailable, Converter={StaticResource BoolToVis}}"
+                            Background="#0E2920"
+                            BorderBrush="#00FF9D"
+                            BorderThickness="1"
+                            Padding="10,3"
+                            Margin="10,0,0,0"
+                            VerticalAlignment="Center"
+                            Cursor="Hand"
+                            ToolTip="{Binding UpdateStatusText}">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <ui:SymbolIcon Symbol="ArrowDownload24" FontSize="14" Foreground="#00FF9D" Margin="0,0,6,0" />
+                            <TextBlock Text="{Binding UpdateButtonText}" FontSize="12.5" FontWeight="Bold" Foreground="#00FF9D" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
 
                 <!-- Center Activity Status Pill -->
@@ -286,6 +302,27 @@
 
                     <!-- Bottom Elevation & Safety Status -->
                     <StackPanel Grid.Row="1" Orientation="Vertical">
+                        <!-- New Release Available Card (One-Click Update & Restart) -->
+                        <Button Command="{Binding InstallUpdateCommand}"
+                                Visibility="{Binding IsUpdateAvailable, Converter={StaticResource BoolToVis}}"
+                                Background="#0D261F"
+                                BorderBrush="#00FF9D"
+                                BorderThickness="1"
+                                Padding="10,8"
+                                Margin="0,0,0,10"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Left"
+                                Cursor="Hand"
+                                ToolTip="{Binding UpdateStatusText}">
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Symbol="ArrowDownload24" Foreground="{StaticResource BrushPilgrimEmerald}" FontSize="18" Margin="0,0,8,0" />
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="New Release Available" FontSize="12.5" FontWeight="Bold" Foreground="#00FF9D" />
+                                    <TextBlock Text="{Binding UpdateButtonText}" FontSize="11" Foreground="#E2E8F0" TextTrimming="CharacterEllipsis" MaxWidth="170" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Button>
+
                         <!-- Guardrail indicator card -->
                         <Border Background="#101C2B" BorderBrush="#1C2E44" BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="0,0,0,10">
                             <StackPanel Orientation="Horizontal">
@@ -2810,18 +2847,14 @@
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
 
-                                <!-- Stylized Glowing P Emblem (Mathematical Vector) -->
+                                <!-- Pilgrim Cleaner Material 3 Pcl Brand Emblem -->
                                 <ctrl:PilgrimLogoControl Grid.Column="0"
                                                          Width="128"
                                                          Height="128"
                                                          ShowSquircleBackground="True"
                                                          GlowOpacity="0.85"
                                                          Margin="0,0,24,0"
-                                                         VerticalAlignment="Center">
-                                    <ctrl:PilgrimLogoControl.Effect>
-                                        <DropShadowEffect BlurRadius="32" Color="#00E5FF" Opacity="0.65" ShadowDepth="0" />
-                                    </ctrl:PilgrimLogoControl.Effect>
-                                </ctrl:PilgrimLogoControl>
+                                                         VerticalAlignment="Center" />
 
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="Pilgrim Cleaner" FontSize="28" FontWeight="Bold" Foreground="#FFFFFF" />
@@ -2840,6 +2873,45 @@
                                         <Border Background="#16273C" BorderBrush="#00E5FF" BorderThickness="1" CornerRadius="4" Padding="8,4">
                                             <TextBlock Text="GNU GPLv3 Licensed" FontSize="14" FontWeight="Bold" Foreground="#00E5FF" />
                                         </Border>
+                                    </StackPanel>
+
+                                    <!-- In-App Update Controls -->
+                                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0" VerticalAlignment="Center">
+                                        <Button Command="{Binding CheckForUpdatesCommand}"
+                                                Background="#14263C"
+                                                BorderBrush="#00E5FF"
+                                                BorderThickness="1"
+                                                Foreground="#00E5FF"
+                                                Padding="12,6"
+                                                Margin="0,0,10,0"
+                                                Cursor="Hand">
+                                            <StackPanel Orientation="Horizontal">
+                                                <ui:SymbolIcon Symbol="ArrowSync24" FontSize="15" Foreground="#00E5FF" Margin="0,0,6,0" />
+                                                <TextBlock Text="Check for Updates" FontSize="13" FontWeight="Bold" />
+                                            </StackPanel>
+                                        </Button>
+
+                                        <Button Command="{Binding InstallUpdateCommand}"
+                                                Visibility="{Binding IsUpdateAvailable, Converter={StaticResource BoolToVis}}"
+                                                Background="#0E2920"
+                                                BorderBrush="#00FF9D"
+                                                BorderThickness="1"
+                                                Foreground="#00FF9D"
+                                                Padding="12,6"
+                                                Margin="0,0,12,0"
+                                                Cursor="Hand">
+                                            <StackPanel Orientation="Horizontal">
+                                                <ui:SymbolIcon Symbol="ArrowDownload24" FontSize="15" Foreground="#00FF9D" Margin="0,0,6,0" />
+                                                <TextBlock Text="{Binding UpdateButtonText}" FontSize="13" FontWeight="Bold" />
+                                            </StackPanel>
+                                        </Button>
+
+                                        <TextBlock Text="{Binding UpdateStatusText}"
+                                                   FontSize="13"
+                                                   Foreground="#94A3B8"
+                                                   VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   MaxWidth="460" />
                                     </StackPanel>
                                 </StackPanel>
                             </Grid>

@@ -9,8 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.2.2] — 2026-11-14
 
+### Added
+- **In-App Updater (`Services/UpdateService`):**
+  - Automatically checks GitHub Releases on startup and displays a one-click **Update & Restart** pill in the title bar, sidebar, and *About Pilgrim* view when a newer version is available.
+  - Verifies the downloaded `PilgrimCleanerSetup.exe` against `SHA256SUMS.txt` before execution, runs the silent installer (`/relaunch=1`), and restarts Pilgrim Cleaner automatically.
+
 ### Changed
-- **Branding & Icons:** Updated `Assets/app.ico` (multi-resolution 16–256 px), `Assets/DesktopIcon.png`, and `Assets/PilgrimIconP.png` to the new Material 3 `Pcl` periodic-element icon design.
+- **Branding & Icons:**
+  - Updated `Assets/app.ico` (multi-resolution 16–256 px), `Assets/DesktopIcon.png`, `Assets/PilgrimIconP.png`, and `Controls/PilgrimLogoControl.cs` to render the new Material 3 `Pcl` periodic-element icon across the title bar, *About Pilgrim* view, taskbar, and installer.
+  - Updated `installer/PilgrimCleaner.iss` to embed `Assets/app.ico`, refresh existing desktop shortcuts on upgrade, and flush the Windows Explorer icon cache (`ie4uinit.exe -show`).
 
 ---
 

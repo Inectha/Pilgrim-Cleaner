@@ -87,6 +87,8 @@ public class Program
         await RunTest("System Telemetry: Hardware & Memory Integrity", TestTelemetryService);
         await RunTest("Privacy Shield: Footprint & Activity Trace Audit", TestPrivacyService);
         await RunTest("Help & Documentation: User Manual Search & Retrieval", TestHelpService);
+        await RunTest("In-App Updater: Release Parsing, URL & SHA-256 Guardrails", TestUpdateServiceSecurity);
+        await RunTest("In-App Updater: Relaunch Script Is Injection-Safe & Parses", TestUpdateRelaunchScriptSafety);
 
         Console.WriteLine();
         Console.WriteLine("---------------------------------------------------------------");
@@ -1042,6 +1044,137 @@ public class Program
 
         Console.Write($"({all.Count} English chapters) ");
         return Task.CompletedTask;
+    }
+
+    private static async Task TestUpdateServiceSecurity()
+    {
+        const string validHash = "A1B2C3D4E5F60718293A4B5C6D7E8F90123456789ABCDEF0123456789ABCDEF0";
+        string validReleaseJson = $@"{{
+            ""tag_name"": ""v1.3.0"",
+            ""draft"": false,
+            ""prerelease"": false,
+            ""html_url"": ""https://github.com/Inectha/Pilgrim-Cleaner/releases/tag/v1.3.0"",
+            ""body"": ""Release notes for 1.3.0"",
+            ""assets"": [
+                {{
+                    ""name"": ""PilgrimCleanerSetup.exe"",
+                    ""size"": 4194304,
+                    ""digest"": ""sha256:{validHash.ToLowerInvariant()}"",
+                    ""browser_download_url"": ""https://github.com/Inectha/Pilgrim-Cleaner/releases/download/v1.3.0/PilgrimCleanerSetup.exe""
+                }},
+                {{
+                    ""name"": ""SHA256SUMS.txt"",
+                    ""size"": 192,
+                    ""browser_download_url"": ""https://github.com/Inectha/Pilgrim-Cleaner/releases/download/v1.3.0/SHA256SUMS.txt""
+                }}
+            ]
+        }}";
+
+        // 1. Newer release detected
+        var newer = UpdateService.ParseReleaseJson(validReleaseJson, "1.2.2");
+        Assert(newer.IsUpdateAvailable, "v1.3.0 should be detected as newer than 1.2.2.");
+        Assert(newer.LatestVersion == "1.3.0", $"Expected LatestVersion 1.3.0, got {newer.LatestVersion}.");
+        Assert(newer.ExpectedSha256 == validHash, "Expected digest SHA-256 to be normalized to uppercase.");
+
+        // 2. Same or newer local version -> no update
+        var upToDate = UpdateService.ParseReleaseJson(validReleaseJson, "1.3.0");
+        Assert(!upToDate.IsUpdateAvailable, "Same version must not report an update.");
+
+        var ahead = UpdateService.ParseReleaseJson(validReleaseJson, "1.4.0");
+        Assert(!ahead.IsUpdateAvailable, "Higher local version must not report an update.");
+
+        // 3. Untrusted host or HTTP URL must be rejected
+        string untrustedUrlJson = validReleaseJson.Replace(
+            "https://github.com/Inectha/Pilgrim-Cleaner/releases/download/v1.3.0/PilgrimCleanerSetup.exe",
+            "https://evil.example.com/PilgrimCleanerSetup.exe");
+        var untrusted = UpdateService.ParseReleaseJson(untrustedUrlJson, "1.2.2");
+        Assert(!untrusted.IsUpdateAvailable, "Release pointing to a non-GitHub download host must be refused.");
+        Assert(string.IsNullOrEmpty(untrusted.InstallerDownloadUrl), "Untrusted installer URL must be cleared.");
+
+        // 4. SHA256SUMS.txt parsing & stream verification
+        string sumsText = $"{validHash}  PilgrimCleanerSetup.exe\r\n00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF  PilgrimCleaner-v1.3.0-Windows-x64.zip";
+        string? parsedHash = UpdateService.ParseSha256ForAsset(sumsText, "PilgrimCleanerSetup.exe");
+        Assert(parsedHash == validHash, $"Expected parsed hash {validHash}, got {parsedHash}.");
+
+        byte[] payload = System.Text.Encoding.UTF8.GetBytes("Authentic installer binary payload");
+        string realHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(payload));
+        using (var ms = new MemoryStream(payload))
+        {
+            UpdateService.VerifyStreamSha256(ms, realHash);
+        }
+
+        // Tampered payload must throw InvalidDataException
+        bool threwOnTamper = false;
+        byte[] tampered = (byte[])payload.Clone();
+        tampered[0] ^= 0xFF;
+        using (var tamperedStream = new MemoryStream(tampered))
+        {
+            try
+            {
+                UpdateService.VerifyStreamSha256(tamperedStream, realHash);
+            }
+            catch (InvalidDataException)
+            {
+                threwOnTamper = true;
+            }
+        }
+        Assert(threwOnTamper, "VerifyStreamSha256 must throw InvalidDataException when payload bytes do not match SHA-256.");
+
+        // 5. ViewModel integration with mock IUpdateService
+        var fakeUpdateService = new FakeUpdateService(newer);
+        var vm = new MainViewModel(new EngineService(), fakeUpdateService);
+        await vm.CheckForUpdatesCommand.ExecuteAsync(null);
+        Assert(vm.IsUpdateAvailable, "MainViewModel.IsUpdateAvailable should be true after detecting v1.3.0.");
+        Assert(vm.LatestVersionText == "v1.3.0", $"Expected LatestVersionText 'v1.3.0', got '{vm.LatestVersionText}'.");
+    }
+
+    private static Task TestUpdateRelaunchScriptSafety()
+    {
+        string hostileDir = @"C:\Temp\Pilgrim ' "" ; $(New-Item C:\pwned_update) ; Dir";
+        string hostileExe = @"C:\Program Files\Pilgrim ' $(calc.exe) \PilgrimCleaner.exe";
+        string script = UpdateService.BuildRelaunchScript(4242, hostileDir, hostileExe);
+
+        Assert(!script.Contains("pwned_update"), "Hostile staging directory path must never appear as raw PowerShell code.");
+        Assert(!script.Contains("calc.exe"), "Hostile executable path must never appear as raw PowerShell code.");
+
+        string scriptFile = Path.Combine(Path.GetTempPath(), "PilgrimTest_UpdateScript_" + Guid.NewGuid().ToString("N") + ".ps1");
+        File.WriteAllText(scriptFile, script);
+        try
+        {
+            var psi = new ProcessStartInfo(SystemTools.PowerShell,
+                $"-NoProfile -NonInteractive -Command \"$e=$null; [void][System.Management.Automation.Language.Parser]::ParseFile('{scriptFile}',[ref]$null,[ref]$e); exit $e.Count\"")
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+            using var process = Process.Start(psi)!;
+            process.WaitForExit(30000);
+            Assert(process.ExitCode == 0, $"Update relaunch script has {process.ExitCode} PowerShell syntax error(s).");
+        }
+        finally
+        {
+            try { File.Delete(scriptFile); } catch { }
+        }
+        return Task.CompletedTask;
+    }
+
+    private sealed class FakeUpdateService : IUpdateService
+    {
+        private readonly UpdateCheckResult _result;
+        public FakeUpdateService(UpdateCheckResult result) => _result = result;
+        public Task<UpdateCheckResult> CheckForUpdateAsync(CancellationToken cancellationToken = default) => Task.FromResult(_result);
+        public Task<string> DownloadAndVerifyInstallerAsync(UpdateCheckResult update, IProgress<double>? progress = null, CancellationToken cancellationToken = default)
+        {
+            progress?.Report(100.0);
+            return Task.FromResult(@"C:\Temp\PilgrimCleanerSetup.exe");
+        }
+        public bool LaunchInstallerAndRequestRestart(string verifiedInstallerPath, out string? errorMessage)
+        {
+            errorMessage = "Dry-run test: restart suppressed.";
+            return false;
+        }
     }
 
     public static void GenerateBrandAssets()

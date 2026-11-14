@@ -33,6 +33,8 @@ namespace LuminaCleaner.ViewModels;
 public partial class MainViewModel : ObservableObject
 {
     private readonly IEngineService _engineService;
+    private readonly IUpdateService _updateService;
+    private UpdateCheckResult? _latestUpdate;
     private CancellationTokenSource? _cts;
 
     public ObservableCollection<ICleanerModule> Modules { get; } = [];
@@ -106,6 +108,28 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private ICleanerModule? _selectedModule;
 
+    // In-App Updater Telemetry & State
+    [ObservableProperty]
+    private bool _isUpdateAvailable;
+
+    [ObservableProperty]
+    private bool _isCheckingForUpdate;
+
+    [ObservableProperty]
+    private bool _isUpdating;
+
+    [ObservableProperty]
+    private double _updateDownloadProgress;
+
+    [ObservableProperty]
+    private string _latestVersionText = string.Empty;
+
+    [ObservableProperty]
+    private string _updateStatusText = $"You are running Pilgrim Cleaner v{AppInfo.Version}.";
+
+    [ObservableProperty]
+    private string _updateButtonText = "Update & Restart";
+
     public bool IsElevated => NativeMethods.IsRunningAsAdministrator();
     public string ElevationStatusText => IsElevated ? "Administrator Mode" : "Standard User Mode";
 
@@ -114,13 +138,18 @@ public partial class MainViewModel : ObservableObject
     public bool CanCancel => State is AppEngineState.Scanning or AppEngineState.Cleaning;
     public bool IsBusy => State is AppEngineState.Scanning or AppEngineState.Cleaning;
 
-    public MainViewModel() : this(new EngineService())
+    public MainViewModel() : this(new EngineService(), new UpdateService())
     {
     }
 
-    public MainViewModel(IEngineService engineService)
+    public MainViewModel(IEngineService engineService) : this(engineService, new UpdateService())
+    {
+    }
+
+    public MainViewModel(IEngineService engineService, IUpdateService updateService)
     {
         _engineService = engineService;
+        _updateService = updateService;
         _engineService.LogAppended += OnLogAppended;
 
         foreach (var mod in _engineService.Modules)
@@ -399,6 +428,107 @@ public partial class MainViewModel : ObservableObject
             const double maxScaleBytes = 10.0 * 1024 * 1024 * 1024; // 10 GB
             double penalty = Math.Min(1.0, TotalRecoverableBytes / maxScaleBytes) * 70.0;
             CleanlinessScore = Math.Max(25, (int)Math.Round(100.0 - penalty));
+        }
+    }
+
+    [RelayCommand]
+    public async Task CheckForUpdatesAsync()
+    {
+        if (IsCheckingForUpdate || IsUpdating) return;
+
+        IsCheckingForUpdate = true;
+        UpdateStatusText = "Checking GitHub Releases for updates...";
+
+        try
+        {
+            var result = await _updateService.CheckForUpdateAsync();
+            _latestUpdate = result;
+
+            if (result.IsUpdateAvailable)
+            {
+                IsUpdateAvailable = true;
+                LatestVersionText = result.LatestTag;
+                UpdateButtonText = $"Update to {result.LatestTag} & Restart";
+                UpdateStatusText = $"New release {result.LatestTag} is available (current: v{result.CurrentVersion}). Click to update and restart.";
+                _engineService.Log(LogLevel.Success, "[UPDATER]", $"New release {result.LatestTag} detected on GitHub Releases.");
+            }
+            else if (!string.IsNullOrEmpty(result.ErrorMessage))
+            {
+                IsUpdateAvailable = false;
+                UpdateStatusText = $"Could not check for updates: {result.ErrorMessage}";
+                _engineService.Log(LogLevel.Warning, "[UPDATER]", result.ErrorMessage);
+            }
+            else
+            {
+                IsUpdateAvailable = false;
+                UpdateStatusText = $"Pilgrim Cleaner is up to date (v{AppInfo.Version}).";
+                _engineService.Log(LogLevel.Info, "[UPDATER]", $"Running latest version (v{AppInfo.Version}).");
+            }
+        }
+        catch (Exception ex)
+        {
+            IsUpdateAvailable = false;
+            UpdateStatusText = $"Update check failed: {ex.Message}";
+            _engineService.Log(LogLevel.Warning, "[UPDATER]", $"Update check error: {ex.Message}");
+        }
+        finally
+        {
+            IsCheckingForUpdate = false;
+        }
+    }
+
+    [RelayCommand]
+    public async Task InstallUpdateAsync()
+    {
+        if (_latestUpdate is null || !IsUpdateAvailable || IsUpdating) return;
+
+        string targetTag = _latestUpdate.LatestTag;
+        IsUpdating = true;
+        UpdateDownloadProgress = 0;
+        UpdateButtonText = $"Downloading {targetTag} (0%)...";
+        UpdateStatusText = $"Downloading and verifying {targetTag} installer...";
+        _engineService.Log(LogLevel.Info, "[UPDATER]", $"Downloading {UpdateService.InstallerAssetName} for {targetTag}...");
+
+        var progress = new Progress<double>(pct =>
+        {
+            UpdateDownloadProgress = Math.Round(pct, 0);
+            if (pct < 95.0)
+            {
+                UpdateButtonText = $"Downloading {targetTag} ({pct:0}%)...";
+                UpdateStatusText = $"Downloading {targetTag} installer ({pct:0}%)...";
+            }
+            else
+            {
+                UpdateButtonText = "Verifying SHA-256 & restarting...";
+                UpdateStatusText = "Verifying SHA-256 signature and launching installer...";
+            }
+        });
+
+        try
+        {
+            string verifiedInstallerPath = await _updateService.DownloadAndVerifyInstallerAsync(_latestUpdate, progress);
+            _engineService.Log(LogLevel.Success, "[UPDATER]", "SHA-256 checksum verified. Launching installer and restarting Pilgrim Cleaner...");
+
+            if (_updateService.LaunchInstallerAndRequestRestart(verifiedInstallerPath, out string? errorMessage))
+            {
+                Application.Current?.Dispatcher.Invoke(() => Application.Current.Shutdown());
+            }
+            else
+            {
+                UpdateButtonText = $"Update to {targetTag} & Restart";
+                UpdateStatusText = errorMessage ?? "Update installer could not be started.";
+                _engineService.Log(LogLevel.Warning, "[UPDATER]", UpdateStatusText);
+            }
+        }
+        catch (Exception ex)
+        {
+            UpdateButtonText = $"Update to {targetTag} & Restart";
+            UpdateStatusText = $"Update failed: {ex.Message}";
+            _engineService.Log(LogLevel.Error, "[UPDATER]", $"Update failed: {ex.Message}");
+        }
+        finally
+        {
+            IsUpdating = false;
         }
     }
 
