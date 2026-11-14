@@ -89,6 +89,7 @@ public class Program
         await RunTest("Help & Documentation: User Manual Search & Retrieval", TestHelpService);
         await RunTest("In-App Updater: Release Parsing, URL & SHA-256 Guardrails", TestUpdateServiceSecurity);
         await RunTest("In-App Updater: Relaunch Script Is Injection-Safe & Parses", TestUpdateRelaunchScriptSafety);
+        await RunTest("Scheduler: Toast Notification Script Is Injection-Safe & Parses", TestToastNotificationScriptSafety);
 
         Console.WriteLine();
         Console.WriteLine("---------------------------------------------------------------");
@@ -1152,6 +1153,38 @@ public class Program
             using var process = Process.Start(psi)!;
             process.WaitForExit(30000);
             Assert(process.ExitCode == 0, $"Update relaunch script has {process.ExitCode} PowerShell syntax error(s).");
+        }
+        finally
+        {
+            try { File.Delete(scriptFile); } catch { }
+        }
+        return Task.CompletedTask;
+    }
+
+    private static Task TestToastNotificationScriptSafety()
+    {
+        string hostileTitle = "Alert ' \" ; $(New-Item C:\\pwned_toast)";
+        string hostileMsg = "Body ' $(calc.exe) > 2.0 GB";
+        string script = SchedulerService.BuildToastNotificationScript(hostileTitle, hostileMsg, SchedulerService.ToastAppUserModelId);
+
+        Assert(!script.Contains("pwned_toast"), "Hostile toast title must never appear as raw PowerShell code.");
+        Assert(!script.Contains("calc.exe"), "Hostile toast message must never appear as raw PowerShell code.");
+
+        string scriptFile = Path.Combine(Path.GetTempPath(), "PilgrimTest_ToastScript_" + Guid.NewGuid().ToString("N") + ".ps1");
+        File.WriteAllText(scriptFile, script);
+        try
+        {
+            var psi = new ProcessStartInfo(SystemTools.PowerShell,
+                $"-NoProfile -NonInteractive -Command \"$e=$null; [void][System.Management.Automation.Language.Parser]::ParseFile('{scriptFile}',[ref]$null,[ref]$e); exit $e.Count\"")
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+            using var process = Process.Start(psi)!;
+            process.WaitForExit(30000);
+            Assert(process.ExitCode == 0, $"Toast notification script has {process.ExitCode} PowerShell syntax error(s).");
         }
         finally
         {

@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Enabled Windows 11 **Acrylic** frosted-glass backdrop (`WindowBackdropType="Acrylic"`, `Background="Transparent"`) with translucent layered surfaces for the title bar, sidebar, cards, and console drawer.
   - Upgraded primary and secondary buttons with tactile Cobalt glass gradients, specular borders, uniform `CornerRadius="10"`, and centered press scaling (`RenderTransformOrigin="0.5,0.5"`).
 
+### Fixed
+- **Windows 11 Toast Notifications (`Services/SchedulerService.cs`):**
+  - Registered `HKCU\Software\Classes\AppUserModelId\PilgrimSoftware.PilgrimCleaner` so Windows 10/11 Action Center displays native toast notifications reliably for the unpackaged app.
+  - Switched `ShowWindowsNotification` to Base64 `-EncodedCommand` via `SystemTools.PowerShell` to prevent quoting/injection issues.
+
 ---
 
 ## [1.2.2] — 2026-11-14

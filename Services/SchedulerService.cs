@@ -17,8 +17,10 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using LuminaCleaner.Interop;
 using LuminaCleaner.Models;
+using Microsoft.Win32;
 
 namespace LuminaCleaner.Services;
 
@@ -267,30 +269,82 @@ public class SchedulerService : ISchedulerService
         catch { }
     }
 
+    public const string ToastAppUserModelId = "PilgrimSoftware.PilgrimCleaner";
+
     public void ShowWindowsNotification(string title, string message)
     {
         try
         {
-            // Windows 11 native toast notification via powershell script
-            string escapedTitle = title.Replace("\"", "\\\"");
-            string escapedMsg = message.Replace("\"", "\\\"");
-            string script = $"[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > $null; " +
-                            $"$template = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02); " +
-                            $"$textNodes = $template.GetElementsByTagName('text'); " +
-                            $"$textNodes.Item(0).AppendChild($template.CreateTextNode('{escapedTitle}')) > $null; " +
-                            $"$textNodes.Item(1).AppendChild($template.CreateTextNode('{escapedMsg}')) > $null; " +
-                            $"$toast = [Windows.UI.Notifications.ToastNotification]::new($template); " +
-                            $"[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Pilgrim Cleaner').Show($toast);";
+            EnsureToastAppUserModelIdRegistered();
 
+            string script = BuildToastNotificationScript(title, message, ToastAppUserModelId);
             var psi = new ProcessStartInfo
             {
                 FileName = SystemTools.PowerShell,
-                Arguments = $"-NoProfile -WindowStyle Hidden -Command \"{script}\"",
+                Arguments = "-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -EncodedCommand " +
+                            Convert.ToBase64String(Encoding.Unicode.GetBytes(script)),
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
-            Process.Start(psi);
+            using var proc = Process.Start(psi);
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Toast notification dispatch failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Registers an AppUserModelId under HKCU\Software\Classes\AppUserModelId so Windows 10/11
+    /// Action Center displays native toast notifications for an unpackaged Win32/WPF app.
+    /// </summary>
+    private static void EnsureToastAppUserModelIdRegistered()
+    {
+        try
+        {
+            using RegistryKey? key = Registry.CurrentUser.CreateSubKey(
+                $@"Software\Classes\AppUserModelId\{ToastAppUserModelId}");
+            if (key is null) return;
+
+            key.SetValue("DisplayName", "Pilgrim Cleaner", RegistryValueKind.String);
+
+            string iconPng = Path.Combine(AppContext.BaseDirectory, "Assets", "PilgrimIconP.png");
+            if (File.Exists(iconPng))
+            {
+                key.SetValue("IconUri", iconPng, RegistryValueKind.String);
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to register AppUserModelId for toast notifications: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Builds an injection-safe PowerShell script for displaying a Windows 10/11 toast notification.
+    /// External strings are passed exclusively as Base64 literals.
+    /// </summary>
+    public static string BuildToastNotificationScript(string title, string message, string appUserModelId)
+    {
+        string titleB64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(title ?? string.Empty));
+        string msgB64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(message ?? string.Empty));
+        string aumidB64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(appUserModelId ?? ToastAppUserModelId));
+
+        return $@"
+$title = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('{titleB64}'))
+$msg = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('{msgB64}'))
+$aumid = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('{aumidB64}'))
+
+[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
+[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
+
+$template = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02)
+$textNodes = $template.GetElementsByTagName('text')
+$textNodes.Item(0).AppendChild($template.CreateTextNode($title)) | Out-Null
+$textNodes.Item(1).AppendChild($template.CreateTextNode($msg)) | Out-Null
+
+$toast = [Windows.UI.Notifications.ToastNotification]::new($template)
+[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier($aumid).Show($toast)
+";
     }
 }
