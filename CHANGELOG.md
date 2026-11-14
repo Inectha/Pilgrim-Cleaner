@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.2] — 2026-11-14
+
+### Changed
+- **Branding & Icons:** Updated `Assets/app.ico` (multi-resolution 16–256 px), `Assets/DesktopIcon.png`, and `Assets/PilgrimIconP.png` to the new Material 3 `Pcl` periodic-element icon design.
+
+---
+
 ## [1.2.0] — 2026-11-11
 
 ### Security

@@ -6,6 +6,6 @@
     AssemblyVersion and FileVersion are derived from Version automatically.
   -->
   <PropertyGroup>
-    <Version>1.2.1</Version>
+    <Version>1.2.2</Version>
   </PropertyGroup>
 </Project>
