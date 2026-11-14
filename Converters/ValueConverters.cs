@@ -120,9 +120,9 @@ public class CleanStatusToBrushConverter : IValueConverter
         {
             return status switch
             {
-                CleanItemStatus.Cleaned => new SolidColorBrush((Color)ColorConverter.ConvertFromString("#00FF9D")),
+                CleanItemStatus.Cleaned => new SolidColorBrush((Color)ColorConverter.ConvertFromString("#81C995")),
                 CleanItemStatus.SkippedLocked => new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFB800")),
-                CleanItemStatus.SkippedRecent => new SolidColorBrush((Color)ColorConverter.ConvertFromString("#00E5FF")),
+                CleanItemStatus.SkippedRecent => new SolidColorBrush((Color)ColorConverter.ConvertFromString("#A8C7FA")),
                 CleanItemStatus.SkippedElevation => new SolidColorBrush((Color)ColorConverter.ConvertFromString("#A855F7")),
                 CleanItemStatus.Failed => new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF4D4D")),
                 _ => new SolidColorBrush((Color)ColorConverter.ConvertFromString("#64748B"))

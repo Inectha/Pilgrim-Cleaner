@@ -44,7 +44,7 @@ public partial class StartupItemModel : ObservableObject
     {
         "High" => "#FF4D4D",
         "Medium" => "#FFB800",
-        "Low" => "#00FF9D",
+        "Low" => "#81C995",
         _ => "#94A3B8"
     };
 }

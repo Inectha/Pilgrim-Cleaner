@@ -21,74 +21,82 @@
             <conv:CleanStatusToBrushConverter x:Key="CleanStatusToBrush" />
             <conv:GreaterThanZeroToVisibilityConverter x:Key="NumberToVis" />
 
-            <!-- Pilgrim Software Brand Palette -->
-            <Color x:Key="ColorPilgrimCyan">#00E5FF</Color>
-            <Color x:Key="ColorPilgrimDeepBlue">#0032A0</Color>
-            <Color x:Key="ColorPilgrimTeal">#00B4D8</Color>
-            <Color x:Key="ColorPilgrimEmerald">#00FF9D</Color>
-            <Color x:Key="ColorPilgrimDark">#0B121C</Color>
-            <Color x:Key="ColorPilgrimSurface">#111C2B</Color>
-            <Color x:Key="ColorPilgrimBorder">#1D2E42</Color>
+            <!-- Pilgrim Software Material 3 Cobalt + Acrylic Glass Palette -->
+            <Color x:Key="ColorPilgrimCyan">#A8C7FA</Color>
+            <Color x:Key="ColorPilgrimDeepBlue">#0B57D0</Color>
+            <Color x:Key="ColorPilgrimCobalt">#2575FC</Color>
+            <Color x:Key="ColorPilgrimIceBlue">#D3E3FD</Color>
+            <Color x:Key="ColorPilgrimTeal">#4C8DF6</Color>
+            <Color x:Key="ColorPilgrimEmerald">#81C995</Color>
+            <Color x:Key="ColorPilgrimDark">#B80B0F17</Color>
+            <Color x:Key="ColorPilgrimSurface">#A6121926</Color>
+            <Color x:Key="ColorPilgrimBorder">#30A8C7FA</Color>
 
             <SolidColorBrush x:Key="BrushPilgrimCyan" Color="{StaticResource ColorPilgrimCyan}" />
             <SolidColorBrush x:Key="BrushPilgrimDeepBlue" Color="{StaticResource ColorPilgrimDeepBlue}" />
+            <SolidColorBrush x:Key="BrushPilgrimCobalt" Color="{StaticResource ColorPilgrimCobalt}" />
+            <SolidColorBrush x:Key="BrushPilgrimIceBlue" Color="{StaticResource ColorPilgrimIceBlue}" />
             <SolidColorBrush x:Key="BrushPilgrimTeal" Color="{StaticResource ColorPilgrimTeal}" />
             <SolidColorBrush x:Key="BrushPilgrimEmerald" Color="{StaticResource ColorPilgrimEmerald}" />
             <SolidColorBrush x:Key="BrushPilgrimDark" Color="{StaticResource ColorPilgrimDark}" />
             <SolidColorBrush x:Key="BrushPilgrimSurface" Color="{StaticResource ColorPilgrimSurface}" />
             <SolidColorBrush x:Key="BrushPilgrimBorder" Color="{StaticResource ColorPilgrimBorder}" />
 
-            <!-- Radiant Brand Gradients -->
+            <!-- Radiant Cobalt Brand Gradients -->
             <LinearGradientBrush x:Key="BrushPilgrimGradient" StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Color="#0032A0" Offset="0.0" />
-                <GradientStop Color="#0096C7" Offset="0.5" />
-                <GradientStop Color="#00E5FF" Offset="1.0" />
+                <GradientStop Color="#0B57D0" Offset="0.0" />
+                <GradientStop Color="#2575FC" Offset="0.55" />
+                <GradientStop Color="#4C8DF6" Offset="1.0" />
             </LinearGradientBrush>
 
-            <LinearGradientBrush x:Key="BrushPilgrimGlowButton" StartPoint="0,0" EndPoint="1,0">
-                <GradientStop Color="#0032A0" Offset="0.0" />
-                <GradientStop Color="#00B4D8" Offset="0.5" />
-                <GradientStop Color="#00E5FF" Offset="1.0" />
+            <LinearGradientBrush x:Key="BrushPilgrimGlowButton" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#0B57D0" Offset="0.0" />
+                <GradientStop Color="#2575FC" Offset="0.55" />
+                <GradientStop Color="#4C8DF6" Offset="1.0" />
             </LinearGradientBrush>
 
             <LinearGradientBrush x:Key="BrushCardGlow" StartPoint="0,0" EndPoint="0,1">
-                <GradientStop Color="#1A283C" Offset="0.0" />
-                <GradientStop Color="#101A26" Offset="1.0" />
+                <GradientStop Color="#B8141C2B" Offset="0.0" />
+                <GradientStop Color="#A60E1420" Offset="1.0" />
             </LinearGradientBrush>
 
-            <!-- Card Style -->
+            <!-- Frosted Glass Card Style -->
             <Style x:Key="PilgrimCardStyle" TargetType="Border">
                 <Setter Property="Background" Value="{StaticResource BrushCardGlow}" />
-                <Setter Property="BorderBrush" Value="{StaticResource BrushPilgrimBorder}" />
+                <Setter Property="BorderBrush" Value="#26A8C7FA" />
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="CornerRadius" Value="12" />
                 <Setter Property="Padding" Value="18" />
                 <Setter Property="Effect">
                     <Setter.Value>
-                        <DropShadowEffect BlurRadius="20" Direction="270" Opacity="0.25" ShadowDepth="4" Color="#000000" />
+                        <DropShadowEffect BlurRadius="22" Direction="270" Opacity="0.22" ShadowDepth="4" Color="#000000" />
                     </Setter.Value>
                 </Setter>
             </Style>
 
-            <!-- Primary Action Button Style -->
+            <!-- Primary Action Button Style (Tactile Cobalt Glass + Specular Rim) -->
             <Style x:Key="PilgrimPrimaryButtonStyle" TargetType="Button">
                 <Setter Property="Background" Value="{StaticResource BrushPilgrimGlowButton}" />
-                <Setter Property="Foreground" Value="#05101A" />
+                <Setter Property="Foreground" Value="#FFFFFF" />
                 <Setter Property="FontFamily" Value="Segoe UI Variable Display, Segoe UI, sans-serif" />
                 <Setter Property="FontWeight" Value="Bold" />
                 <Setter Property="FontSize" Value="15" />
                 <Setter Property="Padding" Value="26,13" />
-                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="BorderBrush" Value="#6BD3E3FD" />
                 <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="border"
                                     Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
                                     CornerRadius="10"
                                     Padding="{TemplateBinding Padding}">
                                 <Border.Effect>
-                                    <DropShadowEffect x:Name="glow" BlurRadius="18" Color="#00E5FF" Opacity="0.4" ShadowDepth="0" />
+                                    <DropShadowEffect x:Name="glow" BlurRadius="20" Color="#2575FC" Opacity="0.40" ShadowDepth="2" Direction="270" />
                                 </Border.Effect>
                                 <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
@@ -96,23 +104,24 @@
                                 <Trigger Property="IsMouseOver" Value="True">
                                     <Setter TargetName="border" Property="Background">
                                         <Setter.Value>
-                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                                <GradientStop Color="#0045D8" Offset="0.0" />
-                                                <GradientStop Color="#00E5FF" Offset="0.7" />
-                                                <GradientStop Color="#80F2FF" Offset="1.0" />
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                <GradientStop Color="#1664E0" Offset="0.0" />
+                                                <GradientStop Color="#3B85FF" Offset="0.55" />
+                                                <GradientStop Color="#6BA3FF" Offset="1.0" />
                                             </LinearGradientBrush>
                                         </Setter.Value>
                                     </Setter>
+                                    <Setter TargetName="border" Property="BorderBrush" Value="#99D3E3FD" />
                                     <Setter TargetName="border" Property="Effect">
                                         <Setter.Value>
-                                            <DropShadowEffect BlurRadius="26" Color="#00E5FF" Opacity="0.75" ShadowDepth="0" />
+                                            <DropShadowEffect BlurRadius="26" Color="#4C8DF6" Opacity="0.55" ShadowDepth="2" Direction="270" />
                                         </Setter.Value>
                                     </Setter>
                                 </Trigger>
                                 <Trigger Property="IsPressed" Value="True">
                                     <Setter TargetName="border" Property="RenderTransform">
                                         <Setter.Value>
-                                            <ScaleTransform ScaleX="0.98" ScaleY="0.98" CenterX="50" CenterY="20" />
+                                            <ScaleTransform ScaleX="0.98" ScaleY="0.98" />
                                         </Setter.Value>
                                     </Setter>
                                 </Trigger>
@@ -126,16 +135,16 @@
                 </Setter>
             </Style>
 
-            <!-- Secondary / Ghost Button Style -->
+            <!-- Secondary / Frosted Glass Pill Button Style -->
             <Style x:Key="PilgrimSecondaryButtonStyle" TargetType="Button">
-                <Setter Property="Background" Value="#122032" />
-                <Setter Property="BorderBrush" Value="#1F3652" />
+                <Setter Property="Background" Value="#B8182B49" />
+                <Setter Property="BorderBrush" Value="#45A8C7FA" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="Foreground" Value="#E2E8F0" />
+                <Setter Property="Foreground" Value="#D3E3FD" />
                 <Setter Property="FontFamily" Value="Segoe UI Variable Text, Segoe UI, sans-serif" />
                 <Setter Property="FontWeight" Value="SemiBold" />
                 <Setter Property="FontSize" Value="13.5" />
-                <Setter Property="Padding" Value="14,7" />
+                <Setter Property="Padding" Value="14,8" />
                 <Setter Property="Cursor" Value="Hand" />
                 <Setter Property="Template">
                     <Setter.Value>
@@ -144,17 +153,17 @@
                                     Background="{TemplateBinding Background}"
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}"
-                                    CornerRadius="6"
+                                    CornerRadius="10"
                                     Padding="{TemplateBinding Padding}">
                                 <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="border" Property="Background" Value="#1C334E" />
-                                    <Setter TargetName="border" Property="BorderBrush" Value="#00E5FF" />
+                                    <Setter TargetName="border" Property="Background" Value="#D91E355A" />
+                                    <Setter TargetName="border" Property="BorderBrush" Value="#804C8DF6" />
                                 </Trigger>
                                 <Trigger Property="IsPressed" Value="True">
-                                    <Setter TargetName="border" Property="Background" Value="#0F1B2B" />
+                                    <Setter TargetName="border" Property="Background" Value="#CC122038" />
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
@@ -177,7 +186,9 @@
                         <ControlTemplate TargetType="RadioButton">
                             <Border x:Name="border"
                                     Background="{TemplateBinding Background}"
-                                    CornerRadius="8"
+                                    BorderThickness="1"
+                                    BorderBrush="Transparent"
+                                    CornerRadius="10"
                                     Padding="14,0">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -191,7 +202,7 @@
                                             Width="3.5"
                                             Height="18"
                                             CornerRadius="2"
-                                            Background="{StaticResource BrushPilgrimCyan}"
+                                            Background="#4C8DF6"
                                             Margin="-10,0,10,0"
                                             Visibility="Collapsed" />
 
@@ -200,12 +211,20 @@
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="border" Property="Background" Value="#152438" />
+                                    <Setter TargetName="border" Property="Background" Value="#4D182B49" />
                                     <Setter Property="Foreground" Value="#E2E8F0" />
                                 </Trigger>
                                 <Trigger Property="IsChecked" Value="True">
-                                    <Setter TargetName="border" Property="Background" Value="#1A2D45" />
-                                    <Setter Property="Foreground" Value="#00E5FF" />
+                                    <Setter TargetName="border" Property="Background">
+                                        <Setter.Value>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                                <GradientStop Color="#402575FC" Offset="0.0" />
+                                                <GradientStop Color="#A6182B49" Offset="1.0" />
+                                            </LinearGradientBrush>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Setter TargetName="border" Property="BorderBrush" Value="#524C8DF6" />
+                                    <Setter Property="Foreground" Value="#D3E3FD" />
                                     <Setter TargetName="indicator" Property="Visibility" Value="Visible" />
                                 </Trigger>
                             </ControlTemplate.Triggers>

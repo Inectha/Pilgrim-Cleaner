@@ -100,9 +100,9 @@ public class DonutGaugeControl : FrameworkElement
             StartPoint = new Point(0, 1),
             EndPoint = new Point(1, 0)
         };
-        gradient.GradientStops.Add(new GradientStop(Color.FromRgb(0, 50, 160), 0.0));   // Pilgrim Deep Blue
-        gradient.GradientStops.Add(new GradientStop(Color.FromRgb(0, 200, 230), 0.5));  // Vibrant Teal
-        gradient.GradientStops.Add(new GradientStop(Color.FromRgb(0, 229, 255), 1.0));  // Pilgrim Cyan
+        gradient.GradientStops.Add(new GradientStop(Color.FromRgb(11, 87, 208), 0.0));   // Material 3 Deep Cobalt (#0B57D0)
+        gradient.GradientStops.Add(new GradientStop(Color.FromRgb(37, 117, 252), 0.55)); // Primary Cobalt (#2575FC)
+        gradient.GradientStops.Add(new GradientStop(Color.FromRgb(168, 199, 250), 1.0)); // Ice Blue (#A8C7FA)
         gradient.Freeze();
 
         _fillPen = new Pen(gradient, 14)
@@ -112,7 +112,7 @@ public class DonutGaugeControl : FrameworkElement
         };
         _fillPen.Freeze();
 
-        _glowPen = new Pen(new SolidColorBrush(Color.FromArgb(50, 0, 229, 255)), 26)
+        _glowPen = new Pen(new SolidColorBrush(Color.FromArgb(48, 37, 117, 252)), 26)
         {
             StartLineCap = PenLineCap.Round,
             EndLineCap = PenLineCap.Round
@@ -130,10 +130,10 @@ public class DonutGaugeControl : FrameworkElement
         _secondaryTextBrush = new SolidColorBrush(Color.FromRgb(148, 163, 184)); // Slate-400
         _secondaryTextBrush.Freeze();
 
-        _badgeBgBrush = new SolidColorBrush(Color.FromArgb(40, 0, 229, 255));
+        _badgeBgBrush = new SolidColorBrush(Color.FromArgb(180, 24, 43, 73)); // Tonal Cobalt #182B49
         _badgeBgBrush.Freeze();
 
-        _badgeTextBrush = new SolidColorBrush(Color.FromRgb(0, 229, 255));
+        _badgeTextBrush = new SolidColorBrush(Color.FromRgb(211, 227, 253)); // Ice Blue #D3E3FD
         _badgeTextBrush.Freeze();
     }
 

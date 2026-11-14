@@ -38,10 +38,10 @@ public class LogMessageModel
 
     public string AccentColor => Level switch
     {
-        LogLevel.Success => "#00FF9D", // Radiant Emerald
+        LogLevel.Success => "#81C995", // Material Mint
         LogLevel.Warning => "#FFB800", // Amber Warning
         LogLevel.Error   => "#FF4D4D", // Ruby Crimson
-        LogLevel.Skipped => "#00E5FF", // Pilgrim Cyan
+        LogLevel.Skipped => "#A8C7FA", // Ice Blue
         _                => "#94A3B8"  // Slate White
     };
 }

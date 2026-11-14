@@ -5,7 +5,7 @@ An open-source, non-destructive Windows 10/11 & Windows Server maintenance utili
 
 <br clear="left" />
 
-[![Release](https://img.shields.io/badge/Release-v1.2.2-00E5FF.svg)](https://github.com/Inectha/Pilgrim-Cleaner/releases/tag/v1.2.2)
+[![Release](https://img.shields.io/badge/Release-v1.2.3-2575FC.svg)](https://github.com/Inectha/Pilgrim-Cleaner/releases/tag/v1.2.3)
 [![Framework](https://img.shields.io/badge/.NET-10.0%20WPF%20%2B%20CLI-512BD4.svg)](https://dotnet.microsoft.com/)
 [![UI](https://img.shields.io/badge/UI-WPF--UI%20%28Fluent%202%20%2F%20Mica%29-0078D4.svg)](https://wpfui.lepo.co/)
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11%20%7C%20Windows%20Server-0078D4.svg)](https://www.microsoft.com/windows)

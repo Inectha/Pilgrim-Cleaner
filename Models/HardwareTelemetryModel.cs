@@ -35,7 +35,7 @@ public partial class DriveTelemetryModel : ObservableObject
     public string FormattedFree => CleanItemModel.FormatBytes(FreeSizeBytes);
     public string FormattedUsed => CleanItemModel.FormatBytes(UsedSizeBytes);
 
-    public string UsageBarColor => UsagePercent > 90.0 ? "#EF4444" : (UsagePercent > 75.0 ? "#F59E0B" : "#00E5FF");
+    public string UsageBarColor => UsagePercent > 90.0 ? "#EF4444" : (UsagePercent > 75.0 ? "#F59E0B" : "#4C8DF6");
 }
 
 public partial class HardwareTelemetryModel : ObservableObject

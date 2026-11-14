@@ -14,9 +14,9 @@
         Height="820" Width="1240"
         MinHeight="700" MinWidth="1020"
         WindowStartupLocation="CenterScreen"
-        WindowBackdropType="Mica"
+        WindowBackdropType="Acrylic"
         ExtendsContentIntoTitleBar="True"
-        Background="#080E17"
+        Background="Transparent"
         Foreground="#F1F5F9"
         FontSize="15"
         FontFamily="Segoe UI Variable Display, Segoe UI, sans-serif">
@@ -30,7 +30,7 @@
         </Grid.RowDefinitions>
 
         <!-- TOP TITLE BAR (Single Consolidated Pilgrim Software Brand Integration) -->
-        <Border Grid.Row="0" Background="#0C1522" BorderBrush="#162538" BorderThickness="0,0,0,1"
+        <Border Grid.Row="0" Background="#BF0D131F" BorderBrush="#26A8C7FA" BorderThickness="0,0,0,1"
                 MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
             <Grid Height="46">
                 <Grid.ColumnDefinitions>
@@ -52,17 +52,17 @@
                         <!-- Pilgrim Cleaner Material 3 Pcl Brand Icon -->
                         <ctrl:PilgrimLogoControl Width="28" Height="28" ShowSquircleBackground="True" GlowOpacity="0.85" Margin="0,0,10,0" VerticalAlignment="Center" />
                         <TextBlock Text="Pilgrim" FontWeight="Bold" FontSize="16" Foreground="#FFFFFF" VerticalAlignment="Center" />
-                        <TextBlock Text="Cleaner" FontWeight="Light" FontSize="16" Foreground="#00E5FF" Margin="5,0,0,0" VerticalAlignment="Center" />
-                        <Border Background="#14263C" BorderBrush="#00E5FF" BorderThickness="1" CornerRadius="4" Padding="6,1.5" Margin="10,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="{x:Static local:AppInfo.ShortVersion}" FontSize="13" FontWeight="Bold" Foreground="#00E5FF" />
+                        <TextBlock Text="Cleaner" FontWeight="Light" FontSize="16" Foreground="#A8C7FA" Margin="5,0,0,0" VerticalAlignment="Center" />
+                        <Border Background="#B8182B49" BorderBrush="#A8C7FA" BorderThickness="1" CornerRadius="4" Padding="6,1.5" Margin="10,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="{x:Static local:AppInfo.ShortVersion}" FontSize="13" FontWeight="Bold" Foreground="#A8C7FA" />
                         </Border>
                     </StackPanel>
 
                     <!-- Interactive One-Click Update & Restart Pill -->
                     <Button Command="{Binding InstallUpdateCommand}"
                             Visibility="{Binding IsUpdateAvailable, Converter={StaticResource BoolToVis}}"
-                            Background="#0E2920"
-                            BorderBrush="#00FF9D"
+                            Background="#B813231D"
+                            BorderBrush="#81C995"
                             BorderThickness="1"
                             Padding="10,3"
                             Margin="10,0,0,0"
@@ -70,8 +70,8 @@
                             Cursor="Hand"
                             ToolTip="{Binding UpdateStatusText}">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <ui:SymbolIcon Symbol="ArrowDownload24" FontSize="14" Foreground="#00FF9D" Margin="0,0,6,0" />
-                            <TextBlock Text="{Binding UpdateButtonText}" FontSize="12.5" FontWeight="Bold" Foreground="#00FF9D" VerticalAlignment="Center" />
+                            <ui:SymbolIcon Symbol="ArrowDownload24" FontSize="14" Foreground="#81C995" Margin="0,0,6,0" />
+                            <TextBlock Text="{Binding UpdateButtonText}" FontSize="12.5" FontWeight="Bold" Foreground="#81C995" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
                 </StackPanel>
@@ -82,9 +82,9 @@
                         IsHitTestVisible="False"
                         Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}">
                     <StackPanel Orientation="Horizontal">
-                        <Border Width="6" Height="6" CornerRadius="3" Background="#00E5FF" Margin="0,0,8,0" VerticalAlignment="Center">
+                        <Border Width="6" Height="6" CornerRadius="3" Background="#A8C7FA" Margin="0,0,8,0" VerticalAlignment="Center">
                             <Border.Effect>
-                                <DropShadowEffect BlurRadius="6" Color="#00E5FF" Opacity="0.9" ShadowDepth="0" />
+                                <DropShadowEffect BlurRadius="6" Color="#A8C7FA" Opacity="0.9" ShadowDepth="0" />
                             </Border.Effect>
                         </Border>
                         <TextBlock Text="{Binding CurrentStatusText}" FontSize="14" Foreground="#CBD5E1" MaxWidth="420" TextTrimming="CharacterEllipsis" />
@@ -103,7 +103,7 @@
             </Grid.ColumnDefinitions>
 
             <!-- ===================== SIDEBAR ===================== -->
-            <Border Grid.Column="0" Background="#0B131F" BorderBrush="#142234" BorderThickness="0,0,1,0">
+            <Border Grid.Column="0" Background="#B00D1422" BorderBrush="#26A8C7FA" BorderThickness="0,0,1,0">
                 <Grid Margin="12,16,12,16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*" />
@@ -139,13 +139,13 @@
                                 <ui:SymbolIcon Grid.Column="0" Symbol="Folder24" FontSize="20" Margin="0,0,12,0" Foreground="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}" />
                                 <TextBlock Grid.Column="1" Text="Storage Modules" VerticalAlignment="Center" />
                                 <Border Grid.Column="2"
-                                        Background="#16273C"
+                                        Background="#B8182B49"
                                         CornerRadius="8"
                                         Padding="6,1"
                                         Margin="4,0,0,0"
                                         VerticalAlignment="Center"
                                         Visibility="{Binding TotalRecoverableBytes, Converter={StaticResource NumberToVis}}">
-                                    <TextBlock Text="{Binding FormattedRecoverableBytes}" FontSize="11" FontWeight="Bold" Foreground="#00E5FF" />
+                                    <TextBlock Text="{Binding FormattedRecoverableBytes}" FontSize="11" FontWeight="Bold" Foreground="#A8C7FA" />
                                 </Border>
                             </Grid>
                         </RadioButton>
@@ -186,7 +186,7 @@
                                 <ui:SymbolIcon Grid.Column="0" Symbol="Apps24" FontSize="20" Margin="0,0,12,0" Foreground="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}" />
                                 <TextBlock Grid.Column="1" Text="Applications" VerticalAlignment="Center" />
                                 <Border Grid.Column="2"
-                                        Background="#16273C"
+                                        Background="#B8182B49"
                                         CornerRadius="8"
                                         Padding="6,1"
                                         Margin="4,0,0,0"
@@ -210,14 +210,14 @@
                                 <ui:SymbolIcon Grid.Column="0" Symbol="DeveloperBoard24" FontSize="20" Margin="0,0,12,0" Foreground="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}" />
                                 <TextBlock Grid.Column="1" Text="Driver Health" VerticalAlignment="Center" />
                                 <Border Grid.Column="2"
-                                        Background="#112B20"
-                                        BorderBrush="#00FF9D"
+                                        Background="#B813231D"
+                                        BorderBrush="#81C995"
                                         BorderThickness="1"
                                         CornerRadius="8"
                                         Padding="5,1"
                                         Margin="4,0,0,0"
                                         VerticalAlignment="Center">
-                                    <TextBlock Text="WHQL" FontSize="11" FontWeight="Bold" Foreground="#00FF9D" />
+                                    <TextBlock Text="WHQL" FontSize="11" FontWeight="Bold" Foreground="#81C995" />
                                 </Border>
                             </Grid>
                         </RadioButton>
@@ -305,8 +305,8 @@
                         <!-- New Release Available Card (One-Click Update & Restart) -->
                         <Button Command="{Binding InstallUpdateCommand}"
                                 Visibility="{Binding IsUpdateAvailable, Converter={StaticResource BoolToVis}}"
-                                Background="#0D261F"
-                                BorderBrush="#00FF9D"
+                                Background="#B813231D"
+                                BorderBrush="#81C995"
                                 BorderThickness="1"
                                 Padding="10,8"
                                 Margin="0,0,0,10"
@@ -317,14 +317,14 @@
                             <StackPanel Orientation="Horizontal">
                                 <ui:SymbolIcon Symbol="ArrowDownload24" Foreground="{StaticResource BrushPilgrimEmerald}" FontSize="18" Margin="0,0,8,0" />
                                 <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="New Release Available" FontSize="12.5" FontWeight="Bold" Foreground="#00FF9D" />
+                                    <TextBlock Text="New Release Available" FontSize="12.5" FontWeight="Bold" Foreground="#81C995" />
                                     <TextBlock Text="{Binding UpdateButtonText}" FontSize="11" Foreground="#E2E8F0" TextTrimming="CharacterEllipsis" MaxWidth="170" />
                                 </StackPanel>
                             </StackPanel>
                         </Button>
 
                         <!-- Guardrail indicator card -->
-                        <Border Background="#101C2B" BorderBrush="#1C2E44" BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="0,0,0,10">
+                        <Border Background="#99121926" BorderBrush="#26A8C7FA" BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="0,0,0,10">
                             <StackPanel Orientation="Horizontal">
                                 <ui:SymbolIcon Symbol="ShieldCheckmark24" Foreground="{StaticResource BrushPilgrimEmerald}" FontSize="16" Margin="0,0,8,0" />
                                 <StackPanel VerticalAlignment="Center">
@@ -335,7 +335,7 @@
                         </Border>
 
                         <!-- Elevation card -->
-                        <Border Background="#101C2B" BorderBrush="#1C2E44" BorderThickness="1" CornerRadius="8" Padding="10,8">
+                        <Border Background="#99121926" BorderBrush="#26A8C7FA" BorderThickness="1" CornerRadius="8" Padding="10,8">
                             <StackPanel Orientation="Horizontal">
                                 <ui:SymbolIcon Symbol="Shield24" Foreground="{StaticResource BrushPilgrimCyan}" FontSize="16" Margin="0,0,8,0" />
                                 <StackPanel VerticalAlignment="Center">
@@ -349,7 +349,7 @@
             </Border>
 
             <!-- ===================== MAIN STAGE ===================== -->
-            <Grid Grid.Column="1" Background="#090F18">
+            <Grid Grid.Column="1" Background="#8F0A0F1A">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
@@ -389,7 +389,7 @@
                                     <TextBlock HorizontalAlignment="Right"
                                                Text="{Binding CurrentStatusText}"
                                                FontSize="13.5"
-                                               Foreground="#00E5FF"
+                                               Foreground="#A8C7FA"
                                                TextTrimming="CharacterEllipsis"
                                                MaxWidth="420" />
                                 </Grid>
@@ -427,7 +427,7 @@
                                             <TextBlock Text="{Binding CleanProgressPercentage, StringFormat='{}{0:N0}%'}"
                                                        FontSize="13"
                                                        FontWeight="Bold"
-                                                       Foreground="#00E5FF"
+                                                       Foreground="#A8C7FA"
                                                        HorizontalAlignment="Right" />
                                         </Grid>
                                     </Grid>
@@ -521,7 +521,7 @@
                                                    Margin="0,4,0,0" />
                                         <TextBlock Text="Across active modules" FontSize="12.5" Foreground="#94A3B8" Margin="0,2,0,0" />
                                     </StackPanel>
-                                    <Border Grid.Column="1" Width="44" Height="44" CornerRadius="10" Background="#16273C" VerticalAlignment="Center">
+                                    <Border Grid.Column="1" Width="44" Height="44" CornerRadius="10" Background="#B8182B49" VerticalAlignment="Center">
                                         <ui:SymbolIcon Symbol="DocumentSearch24" FontSize="24" Foreground="{StaticResource BrushPilgrimCyan}" />
                                     </Border>
                                 </Grid>
@@ -565,7 +565,7 @@
                                                    Margin="0,4,0,0" />
                                         <TextBlock Text="Safe enterprise score" FontSize="12.5" Foreground="#94A3B8" Margin="0,2,0,0" />
                                     </StackPanel>
-                                    <Border Grid.Column="1" Width="44" Height="44" CornerRadius="10" Background="#16273C" VerticalAlignment="Center">
+                                    <Border Grid.Column="1" Width="44" Height="44" CornerRadius="10" Background="#B8182B49" VerticalAlignment="Center">
                                         <ui:SymbolIcon Symbol="Shield24" FontSize="24" Foreground="{StaticResource BrushPilgrimCyan}" />
                                     </Border>
                                 </Grid>
@@ -581,15 +581,15 @@
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
 
-                                <Border Grid.Column="0" Width="46" Height="46" CornerRadius="10" Background="#1B2636" BorderBrush="#00E5FF" BorderThickness="1" Margin="0,0,16,0" VerticalAlignment="Center">
+                                <Border Grid.Column="0" Width="46" Height="46" CornerRadius="10" Background="#1B2636" BorderBrush="#A8C7FA" BorderThickness="1" Margin="0,0,16,0" VerticalAlignment="Center">
                                     <ui:SymbolIcon Symbol="ShieldCheckmark24" FontSize="24" Foreground="{StaticResource BrushPilgrimCyan}" />
                                 </Border>
 
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="PROTECTED STORAGE &amp; GUARDRAILS" FontSize="12.5" FontWeight="Bold" Foreground="#64748B" />
-                                        <Border Background="#16273C" CornerRadius="4" Padding="6,1" Margin="10,0,0,0">
-                                            <TextBlock Text="{Binding TotalSkippedFiles, StringFormat='{}{0:N0} Files Preserved'}" FontSize="12" FontWeight="Bold" Foreground="#00E5FF" />
+                                        <Border Background="#B8182B49" CornerRadius="4" Padding="6,1" Margin="10,0,0,0">
+                                            <TextBlock Text="{Binding TotalSkippedFiles, StringFormat='{}{0:N0} Files Preserved'}" FontSize="12" FontWeight="Bold" Foreground="#A8C7FA" />
                                         </Border>
                                     </StackPanel>
                                     <TextBlock Text="{Binding SkippedExplanation}" FontSize="14" Foreground="#E2E8F0" Margin="0,4,0,0" TextWrapping="Wrap" />
@@ -602,14 +602,14 @@
                                 <!-- Skipped Size Badge -->
                                 <Border Grid.Column="2"
                                         Background="#122336"
-                                        BorderBrush="#00E5FF"
+                                        BorderBrush="#A8C7FA"
                                         BorderThickness="1"
                                         CornerRadius="8"
                                         Padding="16,10"
                                         Margin="14,0,0,0"
                                         VerticalAlignment="Center">
                                     <StackPanel HorizontalAlignment="Center">
-                                        <TextBlock Text="{Binding FormattedSkippedBytes}" FontSize="17" FontWeight="Bold" Foreground="#00E5FF" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding FormattedSkippedBytes}" FontSize="17" FontWeight="Bold" Foreground="#A8C7FA" HorizontalAlignment="Center" />
                                         <TextBlock Text="Protected / Skipped" FontSize="11.5" FontWeight="SemiBold" Foreground="#94A3B8" HorizontalAlignment="Center" />
                                     </StackPanel>
                                 </Border>
@@ -661,14 +661,14 @@
 
                                                     <!-- Recoverable Size Badge -->
                                                     <Border Grid.Column="3"
-                                                            Background="#14263C"
-                                                            BorderBrush="#00E5FF"
+                                                            Background="#B8182B49"
+                                                            BorderBrush="#A8C7FA"
                                                             BorderThickness="1"
                                                             CornerRadius="6"
                                                             Padding="10,4"
                                                             Margin="4,0,16,0"
                                                             VerticalAlignment="Center">
-                                                        <TextBlock Text="{Binding FormattedTotalSize}" FontWeight="Bold" FontSize="13.5" Foreground="#00E5FF" />
+                                                        <TextBlock Text="{Binding FormattedTotalSize}" FontWeight="Bold" FontSize="13.5" Foreground="#A8C7FA" />
                                                     </Border>
 
                                                     <!-- Toggle Switch -->
@@ -702,7 +702,7 @@
 
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                             <Button Background="#142436"
-                                    Foreground="#00E5FF"
+                                    Foreground="#A8C7FA"
                                     BorderBrush="#20354D"
                                     BorderThickness="1"
                                     FontWeight="SemiBold"
@@ -768,7 +768,7 @@
                                                             </Border>
                                                         </StackPanel>
                                                         <TextBlock Text="{Binding SecurityNotice}" FontSize="12.5" Foreground="#94A3B8" Margin="0,4,0,0" TextWrapping="Wrap" />
-                                                        <TextBlock Text="{Binding SkippedReasonSummary}" FontSize="12" Foreground="#00E5FF" Margin="0,2,0,0" />
+                                                        <TextBlock Text="{Binding SkippedReasonSummary}" FontSize="12" Foreground="#A8C7FA" Margin="0,2,0,0" />
                                                     </StackPanel>
 
                                                     <!-- Protected Badge -->
@@ -786,13 +786,13 @@
                                                     <!-- Selected Size Badge -->
                                                     <Border Grid.Column="3"
                                                             Background="#14283E"
-                                                            BorderBrush="#00E5FF"
+                                                            BorderBrush="#A8C7FA"
                                                             BorderThickness="1"
                                                             CornerRadius="6"
                                                             Padding="12,5"
                                                             Margin="4,0,16,0"
                                                             VerticalAlignment="Center">
-                                                        <TextBlock Text="{Binding FormattedSelectedSize, StringFormat='{}Selected: {0}'}" FontWeight="Bold" FontSize="13.5" Foreground="#00E5FF" />
+                                                        <TextBlock Text="{Binding FormattedSelectedSize, StringFormat='{}Selected: {0}'}" FontWeight="Bold" FontSize="13.5" Foreground="#A8C7FA" />
                                                     </Border>
 
                                                     <!-- Toggle Switch -->
@@ -866,7 +866,7 @@
                                                                         <TextBlock Grid.Column="2" Text="{Binding FormattedAge}" FontSize="14" Foreground="#94A3B8" Margin="10,0" VerticalAlignment="Center" />
 
                                                                         <!-- File size -->
-                                                                        <TextBlock Grid.Column="3" Text="{Binding FormattedSize}" FontSize="14" FontWeight="Bold" Foreground="#00E5FF" Margin="10,0" VerticalAlignment="Center" />
+                                                                        <TextBlock Grid.Column="3" Text="{Binding FormattedSize}" FontSize="14" FontWeight="Bold" Foreground="#A8C7FA" Margin="10,0" VerticalAlignment="Center" />
 
                                                                         <!-- Status Pill -->
                                                                         <Border Grid.Column="4" Background="#142030" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
@@ -900,7 +900,7 @@
                             <ui:SymbolIcon Symbol="WindowConsole20" FontSize="20" Foreground="{StaticResource BrushPilgrimCyan}" Margin="0,0,10,0" />
                             <TextBlock Text="OPERATIONAL ACTION LOG" FontWeight="Bold" FontSize="16" Foreground="#FFFFFF" VerticalAlignment="Center" />
                             <Border Background="#142436" CornerRadius="4" Padding="8,2" Margin="12,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding ActionLogs.Count, StringFormat='{}{0} Events'}" FontSize="12.5" FontWeight="Bold" Foreground="#00E5FF" />
+                                <TextBlock Text="{Binding ActionLogs.Count, StringFormat='{}{0} Events'}" FontSize="12.5" FontWeight="Bold" Foreground="#A8C7FA" />
                             </Border>
                         </StackPanel>
 
@@ -1042,7 +1042,7 @@
                     </StackPanel>
 
                     <!-- Filter, Search & Sort Bar -->
-                    <Border Grid.Row="1" Margin="28,0,28,12" Background="#0C1522" BorderBrush="#16273C" BorderThickness="1" CornerRadius="10" Padding="12,8">
+                    <Border Grid.Row="1" Margin="28,0,28,12" Background="#0C1522" BorderBrush="#B8182B49" BorderThickness="1" CornerRadius="10" Padding="12,8">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="260" />
@@ -1063,7 +1063,7 @@
                                              BorderThickness="0"
                                              Foreground="#FFFFFF"
                                              FontSize="13.5"
-                                             CaretBrush="#00E5FF"
+                                             CaretBrush="#A8C7FA"
                                              Text="{Binding AppManager.SearchQuery, UpdateSourceTrigger=PropertyChanged}"
                                              VerticalAlignment="Center" />
                                 </Grid>
@@ -1119,7 +1119,7 @@
                         <!-- Skeleton / Loading Indicator -->
                         <Border Visibility="{Binding AppManager.IsLoading, Converter={StaticResource BoolToVis}}"
                                 Background="#0B1320"
-                                BorderBrush="#16273C"
+                                BorderBrush="#B8182B49"
                                 BorderThickness="1"
                                 CornerRadius="10"
                                 Padding="30">
@@ -1162,7 +1162,7 @@
                                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="4,0,12,0">
                                                     <StackPanel Orientation="Horizontal">
                                                         <TextBlock Text="{Binding DisplayName, Mode=OneWay}" FontWeight="Bold" FontSize="14.5" Foreground="#FFFFFF" TextTrimming="CharacterEllipsis" MaxWidth="450" />
-                                                        <Border Background="#16273C" CornerRadius="4" Padding="6,1.5" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                        <Border Background="#B8182B49" CornerRadius="4" Padding="6,1.5" Margin="8,0,0,0" VerticalAlignment="Center">
                                                             <TextBlock Text="{Binding DisplayVersion, Mode=OneWay}" FontSize="11.5" FontWeight="SemiBold" Foreground="#94A3B8" />
                                                         </Border>
                                                     </StackPanel>
@@ -1224,13 +1224,13 @@
                     <Border Grid.Row="3"
                             Visibility="{Binding AppManager.IsLeftoverDrawerOpen, Converter={StaticResource BoolToVis}}"
                             Background="#091422"
-                            BorderBrush="#00E5FF"
+                            BorderBrush="#A8C7FA"
                             BorderThickness="1"
                             CornerRadius="10"
                             Margin="28,0,28,16"
                             Padding="16,12">
                         <Border.Effect>
-                            <DropShadowEffect BlurRadius="25" Color="#00E5FF" Opacity="0.4" ShadowDepth="0" />
+                            <DropShadowEffect BlurRadius="25" Color="#A8C7FA" Opacity="0.4" ShadowDepth="0" />
                         </Border.Effect>
                         <Grid>
                             <Grid.RowDefinitions>
@@ -1242,7 +1242,7 @@
                             <Grid Grid.Row="0">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <ui:SymbolIcon Symbol="Alert24" Foreground="{StaticResource BrushPilgrimEmerald}" FontSize="20" Margin="0,0,8,0" />
-                                    <TextBlock Text="POST-UNINSTALL LEFTOVER RESIDUE DETECTED" FontWeight="Bold" FontSize="14" Foreground="#00FF9D" />
+                                    <TextBlock Text="POST-UNINSTALL LEFTOVER RESIDUE DETECTED" FontWeight="Bold" FontSize="14" Foreground="#81C995" />
                                 </StackPanel>
                                 <TextBlock Text="{Binding AppManager.FormattedLeftoverSize, Mode=OneWay, StringFormat='Total Residue: {0}'}"
                                            FontWeight="Bold" FontSize="13.5" Foreground="{StaticResource BrushPilgrimCyan}" HorizontalAlignment="Right" />
@@ -1301,13 +1301,13 @@
                     <Border Grid.Row="3"
                             Visibility="{Binding AppManager.IsOrphanDrawerOpen, Converter={StaticResource BoolToVis}}"
                             Background="#091422"
-                            BorderBrush="#00E5FF"
+                            BorderBrush="#A8C7FA"
                             BorderThickness="1"
                             CornerRadius="10"
                             Margin="28,0,28,16"
                             Padding="16,14">
                         <Border.Effect>
-                            <DropShadowEffect BlurRadius="25" Color="#00E5FF" Opacity="0.3" ShadowDepth="0" />
+                            <DropShadowEffect BlurRadius="25" Color="#A8C7FA" Opacity="0.3" ShadowDepth="0" />
                         </Border.Effect>
                         <Grid>
                             <Grid.RowDefinitions>
@@ -1320,9 +1320,9 @@
                             <Grid Grid.Row="0">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <ui:SymbolIcon Symbol="Alert24" Foreground="{StaticResource BrushPilgrimCyan}" FontSize="20" Margin="0,0,8,0" />
-                                    <TextBlock Text="ORPHAN SOFTWARE REGISTRATION DETECTED" FontWeight="Bold" FontSize="14" Foreground="#00E5FF" />
+                                    <TextBlock Text="ORPHAN SOFTWARE REGISTRATION DETECTED" FontWeight="Bold" FontSize="14" Foreground="#A8C7FA" />
                                 </StackPanel>
-                                <Border Background="#102338" BorderBrush="#00E5FF" BorderThickness="1" CornerRadius="4" Padding="8,2" HorizontalAlignment="Right">
+                                <Border Background="#102338" BorderBrush="#A8C7FA" BorderThickness="1" CornerRadius="4" Padding="8,2" HorizontalAlignment="Right">
                                     <TextBlock Text="Zero Registry Tamper Enforced" FontSize="11.5" FontWeight="SemiBold" Foreground="#38BDF8" />
                                 </Border>
                             </Grid>
@@ -1338,7 +1338,7 @@
                                 </TextBlock>
                                 <TextBlock TextWrapping="Wrap" FontSize="12.5" Foreground="#94A3B8" Margin="0,6,0,8" LineHeight="18">
                                     <Run Text="In accordance with Pilgrim Cleaner's " />
-                                    <Run Text="Zero Registry Tamper" FontWeight="SemiBold" Foreground="#00E5FF" />
+                                    <Run Text="Zero Registry Tamper" FontWeight="SemiBold" Foreground="#A8C7FA" />
                                     <Run Text=" policy, Pilgrim Cleaner never modifies or deletes keys in the Windows Registry. You can clean this stale entry using Windows Settings or the PowerShell command below:" />
                                 </TextBlock>
 
@@ -1431,7 +1431,7 @@
                         </Grid>
 
                         <!-- Strict Safety Policy Banner -->
-                        <Border Background="#091726" BorderBrush="#00E5FF" BorderThickness="1" CornerRadius="8" Padding="12,9" Margin="0,0,0,14">
+                        <Border Background="#091726" BorderBrush="#A8C7FA" BorderThickness="1" CornerRadius="8" Padding="12,9" Margin="0,0,0,14">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
@@ -1440,11 +1440,11 @@
                                 </Grid.ColumnDefinitions>
                                 <ui:SymbolIcon Grid.Column="0" Symbol="ShieldCheckmark24" Foreground="{StaticResource BrushPilgrimEmerald}" FontSize="20" Margin="0,0,10,0" VerticalAlignment="Center" />
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="STRICT SAFETY POLICY: ZERO SHADY THIRD-PARTY REPOSITORIES" FontSize="13" FontWeight="Bold" Foreground="#00E5FF" />
+                                    <TextBlock Text="STRICT SAFETY POLICY: ZERO SHADY THIRD-PARTY REPOSITORIES" FontSize="13" FontWeight="Bold" Foreground="#A8C7FA" />
                                     <TextBlock Text="Audits connect exclusively via the native Microsoft Windows Update Session (WUApiLib) and WMI. 100% verified digital signatures." FontSize="12.5" Foreground="#94A3B8" />
                                 </StackPanel>
-                                <Border Grid.Column="2" Background="#11243A" BorderBrush="#00FF9D" BorderThickness="1" CornerRadius="4" Padding="8,3" VerticalAlignment="Center">
-                                    <TextBlock Text="OFFICIAL WHQL ONLY" FontSize="11.5" FontWeight="Bold" Foreground="#00FF9D" />
+                                <Border Grid.Column="2" Background="#11243A" BorderBrush="#81C995" BorderThickness="1" CornerRadius="4" Padding="8,3" VerticalAlignment="Center">
+                                    <TextBlock Text="OFFICIAL WHQL ONLY" FontSize="11.5" FontWeight="Bold" Foreground="#81C995" />
                                 </Border>
                             </Grid>
                         </Border>
@@ -1509,7 +1509,7 @@
                     </StackPanel>
 
                     <!-- Category Pills & Search -->
-                    <Border Grid.Row="1" Margin="28,0,28,12" Background="#0C1522" BorderBrush="#16273C" BorderThickness="1" CornerRadius="10" Padding="12,8">
+                    <Border Grid.Row="1" Margin="28,0,28,12" Background="#0C1522" BorderBrush="#B8182B49" BorderThickness="1" CornerRadius="10" Padding="12,8">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="260" />
@@ -1529,7 +1529,7 @@
                                              BorderThickness="0"
                                              Foreground="#FFFFFF"
                                              FontSize="13.5"
-                                             CaretBrush="#00E5FF"
+                                             CaretBrush="#A8C7FA"
                                              Text="{Binding DriverHealth.SearchQuery, UpdateSourceTrigger=PropertyChanged}"
                                              VerticalAlignment="Center" />
                                 </Grid>
@@ -1602,17 +1602,17 @@
                             <!-- Pending WHQL Updates Section (if any found) -->
                             <Border Visibility="{Binding DriverHealth.HasAvailableUpdates, Converter={StaticResource BoolToVis}}"
                                     Style="{StaticResource PilgrimCardStyle}"
-                                    BorderBrush="#00E5FF"
+                                    BorderBrush="#A8C7FA"
                                     Margin="0,0,0,16">
                                 <StackPanel>
                                     <Grid Margin="0,0,0,10">
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                             <ui:SymbolIcon Symbol="CloudSync24" Foreground="{StaticResource BrushPilgrimCyan}" FontSize="20" Margin="0,0,10,0" />
-                                            <TextBlock Text="OFFICIAL MICROSOFT WHQL DRIVER PACKAGES DISCOVERED" FontWeight="Bold" FontSize="14" Foreground="#00E5FF" />
+                                            <TextBlock Text="OFFICIAL MICROSOFT WHQL DRIVER PACKAGES DISCOVERED" FontWeight="Bold" FontSize="14" Foreground="#A8C7FA" />
                                         </StackPanel>
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                            <Border Background="#122A42" BorderBrush="#00E5FF" BorderThickness="1" CornerRadius="4" Padding="8,4" Margin="0,0,8,0">
-                                                <TextBlock Text="NATIVE WINDOWS UPDATE" FontWeight="Bold" FontSize="12" Foreground="#00E5FF" />
+                                            <Border Background="#122A42" BorderBrush="#A8C7FA" BorderThickness="1" CornerRadius="4" Padding="8,4" Margin="0,0,8,0">
+                                                <TextBlock Text="NATIVE WINDOWS UPDATE" FontWeight="Bold" FontSize="12" Foreground="#A8C7FA" />
                                             </Border>
                                             <Button Style="{StaticResource PilgrimPrimaryButtonStyle}"
                                                     Command="{Binding DriverHealth.InstallAllUpdatesCommand}"
@@ -1640,7 +1640,7 @@
                                                             <TextBlock Text="{Binding Description, Mode=OneWay}" FontSize="13" Foreground="#94A3B8" Margin="0,2,0,0" />
                                                             <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                                                                 <TextBlock Text="Provider: " FontSize="12" Foreground="#64748B" />
-                                                                <TextBlock Text="{Binding DriverProvider, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" Foreground="#00E5FF" Margin="0,0,10,0" />
+                                                                <TextBlock Text="{Binding DriverProvider, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" Foreground="#A8C7FA" Margin="0,0,10,0" />
                                                                 <TextBlock Text="Model: " FontSize="12" Foreground="#64748B" />
                                                                 <TextBlock Text="{Binding DriverModel, Mode=OneWay}" FontSize="12" Foreground="#E2E8F0" Margin="0,0,10,0" />
                                                                 <TextBlock Text="Date: " FontSize="12" Foreground="#64748B" />
@@ -1648,10 +1648,10 @@
                                                             </StackPanel>
                                                         </StackPanel>
                                                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                                            <Border Background="#0F2820" BorderBrush="#00FF9D" BorderThickness="1" CornerRadius="5" Padding="8,4" VerticalAlignment="Center" Margin="0,0,10,0">
+                                                            <Border Background="#0F2820" BorderBrush="#81C995" BorderThickness="1" CornerRadius="5" Padding="8,4" VerticalAlignment="Center" Margin="0,0,10,0">
                                                                 <StackPanel Orientation="Horizontal">
                                                                     <ui:SymbolIcon Symbol="Checkmark24" Foreground="{StaticResource BrushPilgrimEmerald}" FontSize="13.5" Margin="0,0,4,0" />
-                                                                    <TextBlock Text="WHQL Certified" FontWeight="Bold" FontSize="12" Foreground="#00FF9D" />
+                                                                    <TextBlock Text="WHQL Certified" FontWeight="Bold" FontSize="12" Foreground="#81C995" />
                                                                 </StackPanel>
                                                             </Border>
 
@@ -1678,7 +1678,7 @@
                             <!-- Loading Skeleton -->
                             <Border Visibility="{Binding DriverHealth.IsScanningDrivers, Converter={StaticResource BoolToVis}}"
                                     Background="#0B1320"
-                                    BorderBrush="#16273C"
+                                    BorderBrush="#B8182B49"
                                     BorderThickness="1"
                                     CornerRadius="10"
                                     Padding="30"
@@ -1743,19 +1743,19 @@
                                                 <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
                                                     <!-- Up to Date Badge -->
                                                     <Border Visibility="{Binding IsUpToDate, Converter={StaticResource BoolToVis}}"
-                                                            Background="#0B231A" BorderBrush="#00FF9D" BorderThickness="1" CornerRadius="6" Padding="8,4">
+                                                            Background="#0B231A" BorderBrush="#81C995" BorderThickness="1" CornerRadius="6" Padding="8,4">
                                                         <StackPanel Orientation="Horizontal">
                                                             <ui:SymbolIcon Symbol="Checkmark24" Foreground="{StaticResource BrushPilgrimEmerald}" FontSize="14" Margin="0,0,5,0" />
-                                                            <TextBlock Text="Up to Date" FontWeight="Bold" FontSize="12" Foreground="#00FF9D" />
+                                                            <TextBlock Text="Up to Date" FontWeight="Bold" FontSize="12" Foreground="#81C995" />
                                                         </StackPanel>
                                                     </Border>
 
                                                     <!-- Outdated / Update Available Badge & Button -->
                                                     <StackPanel Visibility="{Binding HasPendingUpdate, Converter={StaticResource BoolToVis}}" Orientation="Horizontal">
-                                                        <Border Background="#122538" BorderBrush="#00E5FF" BorderThickness="1" CornerRadius="6" Padding="8,4" Margin="0,0,6,0">
+                                                        <Border Background="#122538" BorderBrush="#A8C7FA" BorderThickness="1" CornerRadius="6" Padding="8,4" Margin="0,0,6,0">
                                                             <StackPanel Orientation="Horizontal">
                                                                 <ui:SymbolIcon Symbol="ArrowCounterclockwise24" Foreground="{StaticResource BrushPilgrimCyan}" FontSize="13.5" Margin="0,0,4,0" />
-                                                                <TextBlock Text="New Version" FontWeight="Bold" FontSize="12" Foreground="#00E5FF" />
+                                                                <TextBlock Text="New Version" FontWeight="Bold" FontSize="12" Foreground="#A8C7FA" />
                                                             </StackPanel>
                                                         </Border>
                                                         <Button Style="{StaticResource PilgrimPrimaryButtonStyle}"
@@ -1854,7 +1854,7 @@
                         </Grid>
                     </StackPanel>
 
-                    <Border Grid.Row="1" Margin="28,0,28,12" Background="#0C1522" BorderBrush="#16273C" BorderThickness="1" CornerRadius="10" Padding="12,8">
+                    <Border Grid.Row="1" Margin="28,0,28,12" Background="#0C1522" BorderBrush="#B8182B49" BorderThickness="1" CornerRadius="10" Padding="12,8">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="220" />
@@ -1867,7 +1867,7 @@
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
                                     <ui:SymbolIcon Symbol="Search24" FontSize="15" Foreground="#64748B" Margin="0,0,6,0" VerticalAlignment="Center" />
-                                    <TextBox Grid.Column="1" Background="Transparent" BorderThickness="0" Foreground="#FFFFFF" FontSize="13.5" CaretBrush="#00E5FF"
+                                    <TextBox Grid.Column="1" Background="Transparent" BorderThickness="0" Foreground="#FFFFFF" FontSize="13.5" CaretBrush="#A8C7FA"
                                              Text="{Binding SpaceLens.SearchQuery, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center" />
                                 </Grid>
                             </Border>
@@ -1907,7 +1907,7 @@
                                                 <TextBlock Text="{Binding FileName}" FontWeight="Bold" FontSize="14" Foreground="#FFFFFF" TextTrimming="CharacterEllipsis" MaxWidth="500" />
                                                 <TextBlock Text="{Binding DirectoryName}" FontSize="12" Foreground="#64748B" TextTrimming="CharacterEllipsis" MaxWidth="500" />
                                             </StackPanel>
-                                            <Border Grid.Column="3" Background="#14263C" CornerRadius="4" Padding="6,2" Margin="0,0,12,0" VerticalAlignment="Center">
+                                            <Border Grid.Column="3" Background="#B8182B49" CornerRadius="4" Padding="6,2" Margin="0,0,12,0" VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding AgeCategory}" FontSize="12" Foreground="#94A3B8" />
                                             </Border>
                                             <TextBlock Grid.Column="4" Text="{Binding FormattedSize}" FontWeight="Bold" FontSize="14" Foreground="{StaticResource BrushPilgrimCyan}" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,16,0" />
@@ -2013,13 +2013,13 @@
                                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                     <ui:SymbolIcon Symbol="DocumentCopy24" Foreground="{StaticResource BrushPilgrimCyan}" FontSize="20" Margin="0,0,8,0" />
                                                     <TextBlock Text="{Binding SampleFileName}" FontWeight="Bold" FontSize="14.5" Foreground="#FFFFFF" />
-                                                    <Border Background="#14263C" CornerRadius="4" Padding="6,2" Margin="10,0,0,0">
-                                                        <TextBlock Text="{Binding Copies.Count, StringFormat='{}{0} Copies'}" FontSize="12" FontWeight="Bold" Foreground="#00E5FF" />
+                                                    <Border Background="#B8182B49" CornerRadius="4" Padding="6,2" Margin="10,0,0,0">
+                                                        <TextBlock Text="{Binding Copies.Count, StringFormat='{}{0} Copies'}" FontSize="12" FontWeight="Bold" Foreground="#A8C7FA" />
                                                     </Border>
-                                                    <Border Background="#0C2419" BorderBrush="#00FF9D" BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="8,0,0,0">
-                                                        <TextBlock Text="SHA-256 Byte-Identical" FontSize="11" FontWeight="Bold" Foreground="#00FF9D" />
+                                                    <Border Background="#0C2419" BorderBrush="#81C995" BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="8,0,0,0">
+                                                        <TextBlock Text="SHA-256 Byte-Identical" FontSize="11" FontWeight="Bold" Foreground="#81C995" />
                                                     </Border>
-                                                    <Border Background="#101C2B" CornerRadius="4" Padding="6,2" Margin="8,0,0,0">
+                                                    <Border Background="#99121926" CornerRadius="4" Padding="6,2" Margin="8,0,0,0">
                                                         <TextBlock Text="{Binding FormattedSize, StringFormat='{}File Size: {0}'}" FontSize="11.5" Foreground="#94A3B8" />
                                                     </Border>
                                                 </StackPanel>
@@ -2040,8 +2040,8 @@
                                                                 </Grid.ColumnDefinitions>
                                                                 <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}" VerticalAlignment="Center" Margin="0,0,8,0" IsEnabled="{Binding IsOriginal, Converter={StaticResource InvertedBool}}" />
                                                                 <TextBlock Grid.Column="1" Text="{Binding FullPath}" FontSize="12.5" Foreground="#CBD5E1" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="620" ToolTip="{Binding FullPath}" />
-                                                                <Border Grid.Column="2" Visibility="{Binding IsOriginal, Converter={StaticResource BoolToVis}}" Background="#0E2B1E" BorderBrush="#00FF9D" BorderThickness="1" CornerRadius="4" Padding="6,1.5" Margin="8,0,8,0" VerticalAlignment="Center">
-                                                                    <TextBlock Text="Original (Keep)" FontSize="11" FontWeight="Bold" Foreground="#00FF9D" />
+                                                                <Border Grid.Column="2" Visibility="{Binding IsOriginal, Converter={StaticResource BoolToVis}}" Background="#0E2B1E" BorderBrush="#81C995" BorderThickness="1" CornerRadius="4" Padding="6,1.5" Margin="8,0,8,0" VerticalAlignment="Center">
+                                                                    <TextBlock Text="Original (Keep)" FontSize="11" FontWeight="Bold" Foreground="#81C995" />
                                                                 </Border>
                                                                 <Border Grid.Column="2" Visibility="{Binding IsOriginal, Converter={StaticResource InvertedBoolToVis}}" Background="#122436" CornerRadius="4" Padding="6,1.5" Margin="8,0,8,0" VerticalAlignment="Center">
                                                                     <TextBlock Text="Redundant Copy" FontSize="11" Foreground="#38BDF8" />
@@ -2116,7 +2116,7 @@
                         </Grid>
                     </StackPanel>
 
-                    <Border Grid.Row="1" Margin="28,0,28,12" Background="#0C1522" BorderBrush="#16273C" BorderThickness="1" CornerRadius="10" Padding="12,8">
+                    <Border Grid.Row="1" Margin="28,0,28,12" Background="#0C1522" BorderBrush="#B8182B49" BorderThickness="1" CornerRadius="10" Padding="12,8">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="240" />
@@ -2129,7 +2129,7 @@
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
                                     <ui:SymbolIcon Symbol="Search24" FontSize="15" Foreground="#64748B" Margin="0,0,6,0" VerticalAlignment="Center" />
-                                    <TextBox Grid.Column="1" Background="Transparent" BorderThickness="0" Foreground="#FFFFFF" FontSize="13.5" CaretBrush="#00E5FF"
+                                    <TextBox Grid.Column="1" Background="Transparent" BorderThickness="0" Foreground="#FFFFFF" FontSize="13.5" CaretBrush="#A8C7FA"
                                              Text="{Binding Startup.SearchQuery, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center" />
                                 </Grid>
                             </Border>
@@ -2259,11 +2259,11 @@
                             <!-- Storage Volumes Section -->
                             <Border Style="{StaticResource PilgrimCardStyle}" Margin="0,0,0,10">
                                 <StackPanel>
-                                    <TextBlock Text="LOGICAL DISK VOLUMES &amp; PARTITIONS" FontWeight="Bold" FontSize="14" Foreground="#00E5FF" Margin="0,0,0,12" />
+                                    <TextBlock Text="LOGICAL DISK VOLUMES &amp; PARTITIONS" FontWeight="Bold" FontSize="14" Foreground="#A8C7FA" Margin="0,0,0,12" />
                                     <ItemsControl ItemsSource="{Binding Telemetry.Telemetry.Drives}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
-                                                <Border Background="#070C15" BorderBrush="#16273C" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,0,0,8">
+                                                <Border Background="#070C15" BorderBrush="#B8182B49" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,0,0,8">
                                                     <Grid>
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition Width="Auto" />
@@ -2328,7 +2328,7 @@
                             <!-- Enterprise Manifesto Card -->
                             <Border Style="{StaticResource PilgrimCardStyle}">
                                 <StackPanel>
-                                    <TextBlock Text="ENTERPRISE MEMORY &amp; PROCESSOR INTEGRITY" FontWeight="Bold" FontSize="14" Foreground="#00E5FF" Margin="0,0,0,10" />
+                                    <TextBlock Text="ENTERPRISE MEMORY &amp; PROCESSOR INTEGRITY" FontWeight="Bold" FontSize="14" Foreground="#A8C7FA" Margin="0,0,0,10" />
                                     <TextBlock Text="Pilgrim Cleaner adheres to the Windows kernel architecture manifesto: memory flushing hacks are strictly disabled. Windows dynamically manages standby cache to accelerate disk reads. Telemetry provides authentic real-time metrics without thrashing page files." FontSize="14" Foreground="#94A3B8" TextWrapping="Wrap" />
                                 </StackPanel>
                             </Border>
@@ -2376,7 +2376,7 @@
                                     <TextBlock Text="{Binding Privacy.StatusMessage}" FontSize="15" FontWeight="SemiBold" Foreground="#FFFFFF" Margin="0,4,0,0" />
                                 </StackPanel>
                                 <Border Grid.Column="1" Background="#122538" CornerRadius="8" Padding="12,6" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding Privacy.TotalTraceItems, StringFormat='{}{0} Traces Found'}" FontWeight="Bold" FontSize="14" Foreground="#00E5FF" />
+                                    <TextBlock Text="{Binding Privacy.TotalTraceItems, StringFormat='{}{0} Traces Found'}" FontWeight="Bold" FontSize="14" Foreground="#A8C7FA" />
                                 </Border>
                             </Grid>
                         </Border>
@@ -2405,10 +2405,10 @@
                                                     <TextBlock Text="{Binding Title}" FontWeight="Bold" FontSize="14.5" Foreground="#FFFFFF" />
                                                     <TextBlock Text="{Binding Description}" FontSize="13" Foreground="#94A3B8" Margin="0,2,0,0" />
                                                 </StackPanel>
-                                                <Border Grid.Column="3" Background="#14263C" CornerRadius="4" Padding="8,3" Margin="0,0,10,0" VerticalAlignment="Center">
+                                                <Border Grid.Column="3" Background="#B8182B49" CornerRadius="4" Padding="8,3" Margin="0,0,10,0" VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding Category}" FontSize="12" Foreground="#7DD3FC" />
                                                 </Border>
-                                                <Border Grid.Column="4" Background="#16273C" CornerRadius="6" Padding="10,4" Margin="0,0,10,0" VerticalAlignment="Center">
+                                                <Border Grid.Column="4" Background="#B8182B49" CornerRadius="6" Padding="10,4" Margin="0,0,10,0" VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding ItemCount, StringFormat='{}{0} items'}" FontWeight="Bold" FontSize="13.5" Foreground="{StaticResource BrushPilgrimCyan}" />
                                                 </Border>
                                                 <Button Grid.Column="5" Style="{StaticResource PilgrimSecondaryButtonStyle}"
@@ -2510,7 +2510,7 @@
                             <Border Style="{StaticResource PilgrimCardStyle}" Margin="0,0,0,12">
                                 <StackPanel>
                                     <Grid Margin="0,0,0,10">
-                                        <TextBlock Text="WINDOWS TASK SCHEDULER VERIFICATION TELEMETRY" FontWeight="Bold" FontSize="12.5" Foreground="#00E5FF" />
+                                        <TextBlock Text="WINDOWS TASK SCHEDULER VERIFICATION TELEMETRY" FontWeight="Bold" FontSize="12.5" Foreground="#A8C7FA" />
                                         <Button HorizontalAlignment="Right" Style="{StaticResource PilgrimSecondaryButtonStyle}" Command="{Binding Scheduler.RefreshStatusCommand}" Padding="8,3">
                                             <StackPanel Orientation="Horizontal">
                                                 <ui:SymbolIcon Symbol="ArrowCounterclockwise24" FontSize="13.5" Margin="0,0,4,0" />
@@ -2527,23 +2527,23 @@
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
                                         <!-- Next Run Time -->
-                                        <Border Grid.Column="0" Background="#070C15" BorderBrush="#16273C" BorderThickness="1" CornerRadius="6" Padding="12,10" Margin="0,0,6,0">
+                                        <Border Grid.Column="0" Background="#070C15" BorderBrush="#B8182B49" BorderThickness="1" CornerRadius="6" Padding="12,10" Margin="0,0,6,0">
                                             <StackPanel>
                                                 <TextBlock Text="NEXT SCHEDULED RUN" FontSize="11" FontWeight="Bold" Foreground="#64748B" />
-                                                <TextBlock Text="{Binding Scheduler.TaskInfo.NextRunTime, Mode=OneWay}" FontSize="14.5" FontWeight="Bold" Foreground="#00E5FF" Margin="0,4,0,0" />
+                                                <TextBlock Text="{Binding Scheduler.TaskInfo.NextRunTime, Mode=OneWay}" FontSize="14.5" FontWeight="Bold" Foreground="#A8C7FA" Margin="0,4,0,0" />
                                                 <TextBlock Text="Exact OS Trigger Time" FontSize="11.5" Foreground="#94A3B8" Margin="0,2,0,0" />
                                             </StackPanel>
                                         </Border>
                                         <!-- Task Status -->
-                                        <Border Grid.Column="1" Background="#070C15" BorderBrush="#16273C" BorderThickness="1" CornerRadius="6" Padding="12,10" Margin="3,0,3,0">
+                                        <Border Grid.Column="1" Background="#070C15" BorderBrush="#B8182B49" BorderThickness="1" CornerRadius="6" Padding="12,10" Margin="3,0,3,0">
                                             <StackPanel>
                                                 <TextBlock Text="TASK STATE" FontSize="11" FontWeight="Bold" Foreground="#64748B" />
-                                                <TextBlock Text="{Binding Scheduler.TaskInfo.Status, Mode=OneWay}" FontSize="14.5" FontWeight="Bold" Foreground="#00FF9D" Margin="0,4,0,0" />
+                                                <TextBlock Text="{Binding Scheduler.TaskInfo.Status, Mode=OneWay}" FontSize="14.5" FontWeight="Bold" Foreground="#81C995" Margin="0,4,0,0" />
                                                 <TextBlock Text="Windows Task Engine" FontSize="11.5" Foreground="#94A3B8" Margin="0,2,0,0" />
                                             </StackPanel>
                                         </Border>
                                         <!-- Last Run Time -->
-                                        <Border Grid.Column="2" Background="#070C15" BorderBrush="#16273C" BorderThickness="1" CornerRadius="6" Padding="12,10" Margin="3,0,3,0">
+                                        <Border Grid.Column="2" Background="#070C15" BorderBrush="#B8182B49" BorderThickness="1" CornerRadius="6" Padding="12,10" Margin="3,0,3,0">
                                             <StackPanel>
                                                 <TextBlock Text="LAST EXECUTION" FontSize="11" FontWeight="Bold" Foreground="#64748B" />
                                                 <TextBlock Text="{Binding Scheduler.TaskInfo.LastRunTime, Mode=OneWay}" FontSize="13.5" FontWeight="SemiBold" Foreground="#FFFFFF" TextTrimming="CharacterEllipsis" Margin="0,4,0,0" />
@@ -2551,7 +2551,7 @@
                                             </StackPanel>
                                         </Border>
                                         <!-- OS Task Path -->
-                                        <Border Grid.Column="3" Background="#070C15" BorderBrush="#16273C" BorderThickness="1" CornerRadius="6" Padding="12,10" Margin="6,0,0,0">
+                                        <Border Grid.Column="3" Background="#070C15" BorderBrush="#B8182B49" BorderThickness="1" CornerRadius="6" Padding="12,10" Margin="6,0,0,0">
                                             <StackPanel>
                                                 <TextBlock Text="OS TASK NAME" FontSize="11" FontWeight="Bold" Foreground="#64748B" />
                                                 <TextBlock Text="{Binding Scheduler.TaskInfo.TaskPath, Mode=OneWay}" FontSize="13.5" FontWeight="SemiBold" Foreground="#FFFFFF" Margin="0,4,0,0" />
@@ -2581,7 +2581,7 @@
                             <!-- Custom Date, Day & Time Configuration Panel -->
                             <Border Style="{StaticResource PilgrimCardStyle}" Margin="0,0,0,12">
                                 <StackPanel>
-                                    <TextBlock Text="CUSTOMIZE SCHEDULE (FREQUENCY, DAY &amp; TIME)" FontWeight="Bold" FontSize="12.5" Foreground="#00E5FF" Margin="0,0,0,12" />
+                                    <TextBlock Text="CUSTOMIZE SCHEDULE (FREQUENCY, DAY &amp; TIME)" FontWeight="Bold" FontSize="12.5" Foreground="#A8C7FA" Margin="0,0,0,12" />
 
                                     <Grid Margin="0,0,0,14">
                                         <Grid.ColumnDefinitions>
@@ -2655,7 +2655,7 @@
                             <!-- Architecture Manifesto Card -->
                             <Border Style="{StaticResource PilgrimCardStyle}">
                                 <StackPanel>
-                                    <TextBlock Text="HOW WINDOWS TASK SCHEDULER EXECUTES SILENT AUDITS" FontWeight="Bold" FontSize="14" Foreground="#00E5FF" Margin="0,0,0,10" />
+                                    <TextBlock Text="HOW WINDOWS TASK SCHEDULER EXECUTES SILENT AUDITS" FontWeight="Bold" FontSize="14" Foreground="#A8C7FA" Margin="0,0,0,10" />
                                     <TextBlock Text="When activated, the native Windows Task Scheduler service (Schedule / schtasks.exe) invokes Pilgrim Cleaner in headless silent mode ('--silent-audit') at your chosen time. The app scans your storage targets in under 3 seconds with zero UI footprint. If junk cache exceeds your threshold, a native Windows 11 notification banner is displayed inviting you to review or purge. Zero permanent background memory or CPU usage when idle." FontSize="14" Foreground="#94A3B8" TextWrapping="Wrap" />
                                 </StackPanel>
                             </Border>
@@ -2681,14 +2681,14 @@
                                 </StackPanel>
                                 <TextBlock Text="Comprehensive interactive manual, enterprise safety policies, and step-by-step suite documentation." FontSize="14" Foreground="#94A3B8" Margin="34,2,0,0" />
                             </StackPanel>
-                            <Border HorizontalAlignment="Right" Background="#11243A" BorderBrush="#00E5FF" BorderThickness="1" CornerRadius="6" Padding="12,6" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding Help.ResultsCount, StringFormat='{}{0} Chapters Available'}" FontSize="13" FontWeight="Bold" Foreground="#00E5FF" />
+                            <Border HorizontalAlignment="Right" Background="#11243A" BorderBrush="#A8C7FA" BorderThickness="1" CornerRadius="6" Padding="12,6" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Help.ResultsCount, StringFormat='{}{0} Chapters Available'}" FontSize="13" FontWeight="Bold" Foreground="#A8C7FA" />
                             </Border>
                         </Grid>
                     </StackPanel>
 
                     <!-- Search & Filter Bar -->
-                    <Border Grid.Row="1" Margin="28,0,28,12" Background="#0C1522" BorderBrush="#16273C" BorderThickness="1" CornerRadius="10" Padding="12,8">
+                    <Border Grid.Row="1" Margin="28,0,28,12" Background="#0C1522" BorderBrush="#B8182B49" BorderThickness="1" CornerRadius="10" Padding="12,8">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="260" />
@@ -2704,7 +2704,7 @@
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
                                     <ui:SymbolIcon Symbol="Search24" FontSize="15" Foreground="#64748B" Margin="0,0,6,0" VerticalAlignment="Center" />
-                                    <TextBox Grid.Column="1" Background="Transparent" BorderThickness="0" Foreground="#FFFFFF" FontSize="13.5" CaretBrush="#00E5FF"
+                                    <TextBox Grid.Column="1" Background="Transparent" BorderThickness="0" Foreground="#FFFFFF" FontSize="13.5" CaretBrush="#A8C7FA"
                                              Text="{Binding Help.SearchQuery, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center" />
                                 </Grid>
                             </Border>
@@ -2783,12 +2783,12 @@
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <Border Grid.Column="0" Width="44" Height="44" CornerRadius="10" Background="#112238" BorderBrush="#00E5FF" BorderThickness="1" Margin="0,0,14,0" VerticalAlignment="Center">
+                                        <Border Grid.Column="0" Width="44" Height="44" CornerRadius="10" Background="#112238" BorderBrush="#A8C7FA" BorderThickness="1" Margin="0,0,14,0" VerticalAlignment="Center">
                                             <ui:SymbolIcon Symbol="{Binding IconSymbol}" FontSize="24" Foreground="{StaticResource BrushPilgrimCyan}" />
                                         </Border>
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                            <Border Background="#14263C" CornerRadius="4" Padding="6,2" HorizontalAlignment="Left" Margin="0,0,0,4">
-                                                <TextBlock Text="{Binding Category}" FontSize="11.5" FontWeight="Bold" Foreground="#00E5FF" />
+                                            <Border Background="#B8182B49" CornerRadius="4" Padding="6,2" HorizontalAlignment="Left" Margin="0,0,0,4">
+                                                <TextBlock Text="{Binding Category}" FontSize="11.5" FontWeight="Bold" Foreground="#A8C7FA" />
                                             </Border>
                                             <TextBlock Text="{Binding Title}" FontSize="20" FontWeight="Bold" Foreground="#FFFFFF" />
                                         </StackPanel>
@@ -2858,50 +2858,50 @@
 
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="Pilgrim Cleaner" FontSize="28" FontWeight="Bold" Foreground="#FFFFFF" />
-                                    <TextBlock Text="Developed by Pilgrim Software" FontSize="16" FontWeight="SemiBold" Foreground="#00E5FF" Margin="0,2,0,0" />
+                                    <TextBlock Text="Developed by Pilgrim Software" FontSize="16" FontWeight="SemiBold" Foreground="#A8C7FA" Margin="0,2,0,0" />
                                     <TextBlock Text="Windows Disk Cleaner, Application Uninstaller, Safe WHQL Driver Auditor &amp; Sysadmin CLI" FontSize="15" Foreground="#94A3B8" Margin="0,6,0,0" />
                                     <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
-                                        <Border Background="#16273C" CornerRadius="4" Padding="8,4" Margin="0,0,8,0">
-                                            <TextBlock Text="{x:Static local:AppInfo.VersionLabel}" FontSize="14" FontWeight="Bold" Foreground="#00E5FF" />
+                                        <Border Background="#B8182B49" CornerRadius="4" Padding="8,4" Margin="0,0,8,0">
+                                            <TextBlock Text="{x:Static local:AppInfo.VersionLabel}" FontSize="14" FontWeight="Bold" Foreground="#A8C7FA" />
                                         </Border>
-                                        <Border Background="#16273C" CornerRadius="4" Padding="8,4" Margin="0,0,8,0">
+                                        <Border Background="#B8182B49" CornerRadius="4" Padding="8,4" Margin="0,0,8,0">
                                             <TextBlock Text=".NET 10.0 Windows x64" FontSize="14" FontWeight="Bold" Foreground="#94A3B8" />
                                         </Border>
-                                        <Border Background="#16273C" CornerRadius="4" Padding="8,4" Margin="0,0,8,0">
-                                            <TextBlock Text="Sysadmin CLI (pilgrim.exe)" FontSize="14" FontWeight="Bold" Foreground="#00FF9D" />
+                                        <Border Background="#B8182B49" CornerRadius="4" Padding="8,4" Margin="0,0,8,0">
+                                            <TextBlock Text="Sysadmin CLI (pilgrim.exe)" FontSize="14" FontWeight="Bold" Foreground="#81C995" />
                                         </Border>
-                                        <Border Background="#16273C" BorderBrush="#00E5FF" BorderThickness="1" CornerRadius="4" Padding="8,4">
-                                            <TextBlock Text="GNU GPLv3 Licensed" FontSize="14" FontWeight="Bold" Foreground="#00E5FF" />
+                                        <Border Background="#B8182B49" BorderBrush="#A8C7FA" BorderThickness="1" CornerRadius="4" Padding="8,4">
+                                            <TextBlock Text="GNU GPLv3 Licensed" FontSize="14" FontWeight="Bold" Foreground="#A8C7FA" />
                                         </Border>
                                     </StackPanel>
 
                                     <!-- In-App Update Controls -->
                                     <StackPanel Orientation="Horizontal" Margin="0,14,0,0" VerticalAlignment="Center">
                                         <Button Command="{Binding CheckForUpdatesCommand}"
-                                                Background="#14263C"
-                                                BorderBrush="#00E5FF"
+                                                Background="#B8182B49"
+                                                BorderBrush="#A8C7FA"
                                                 BorderThickness="1"
-                                                Foreground="#00E5FF"
+                                                Foreground="#A8C7FA"
                                                 Padding="12,6"
                                                 Margin="0,0,10,0"
                                                 Cursor="Hand">
                                             <StackPanel Orientation="Horizontal">
-                                                <ui:SymbolIcon Symbol="ArrowSync24" FontSize="15" Foreground="#00E5FF" Margin="0,0,6,0" />
+                                                <ui:SymbolIcon Symbol="ArrowSync24" FontSize="15" Foreground="#A8C7FA" Margin="0,0,6,0" />
                                                 <TextBlock Text="Check for Updates" FontSize="13" FontWeight="Bold" />
                                             </StackPanel>
                                         </Button>
 
                                         <Button Command="{Binding InstallUpdateCommand}"
                                                 Visibility="{Binding IsUpdateAvailable, Converter={StaticResource BoolToVis}}"
-                                                Background="#0E2920"
-                                                BorderBrush="#00FF9D"
+                                                Background="#B813231D"
+                                                BorderBrush="#81C995"
                                                 BorderThickness="1"
-                                                Foreground="#00FF9D"
+                                                Foreground="#81C995"
                                                 Padding="12,6"
                                                 Margin="0,0,12,0"
                                                 Cursor="Hand">
                                             <StackPanel Orientation="Horizontal">
-                                                <ui:SymbolIcon Symbol="ArrowDownload24" FontSize="15" Foreground="#00FF9D" Margin="0,0,6,0" />
+                                                <ui:SymbolIcon Symbol="ArrowDownload24" FontSize="15" Foreground="#81C995" Margin="0,0,6,0" />
                                                 <TextBlock Text="{Binding UpdateButtonText}" FontSize="13" FontWeight="Bold" />
                                             </StackPanel>
                                         </Button>
@@ -2920,7 +2920,7 @@
                         <!-- Enterprise Safety Manifesto Card -->
                         <Border Grid.Row="1" Style="{StaticResource PilgrimCardStyle}" Margin="0,0,0,20">
                             <StackPanel Orientation="Vertical">
-                                <TextBlock Text="ENTERPRISE SAFETY MANIFESTO &amp; SYSTEM POLICIES" FontSize="14" FontWeight="Bold" Foreground="#00E5FF" Margin="0,0,0,14" />
+                                <TextBlock Text="ENTERPRISE SAFETY MANIFESTO &amp; SYSTEM POLICIES" FontSize="14" FontWeight="Bold" Foreground="#A8C7FA" Margin="0,0,0,14" />
 
                                 <Grid Margin="0,4">
                                     <Grid.ColumnDefinitions>
@@ -3002,10 +3002,10 @@
                                 <Grid Margin="0,0,0,10">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                         <ui:SymbolIcon Symbol="Code24" Foreground="{StaticResource BrushPilgrimCyan}" FontSize="20" Margin="0,0,10,0" />
-                                        <TextBlock Text="FREE &amp; OPEN SOURCE: GNU GENERAL PUBLIC LICENSE v3 (GPLv3)" FontSize="14" FontWeight="Bold" Foreground="#00E5FF" VerticalAlignment="Center" />
+                                        <TextBlock Text="FREE &amp; OPEN SOURCE: GNU GENERAL PUBLIC LICENSE v3 (GPLv3)" FontSize="14" FontWeight="Bold" Foreground="#A8C7FA" VerticalAlignment="Center" />
                                     </StackPanel>
-                                    <Border Background="#14263C" BorderBrush="#00E5FF" BorderThickness="1" CornerRadius="4" Padding="8,3" HorizontalAlignment="Right">
-                                        <TextBlock Text="GNU GPLv3" FontWeight="Bold" FontSize="12.5" Foreground="#00E5FF" />
+                                    <Border Background="#B8182B49" BorderBrush="#A8C7FA" BorderThickness="1" CornerRadius="4" Padding="8,3" HorizontalAlignment="Right">
+                                        <TextBlock Text="GNU GPLv3" FontWeight="Bold" FontSize="12.5" Foreground="#A8C7FA" />
                                     </Border>
                                 </Grid>
 
@@ -3016,7 +3016,7 @@
                                 <Border Background="#0B131E" BorderBrush="#16273A" BorderThickness="1" CornerRadius="6" Padding="12,10">
                                     <StackPanel Orientation="Horizontal">
                                         <ui:SymbolIcon Symbol="Checkmark24" Foreground="{StaticResource BrushPilgrimEmerald}" FontSize="16" Margin="0,0,8,0" />
-                                        <TextBlock Text="Freedom to run, study, modify, and redistribute this software freely without vendor lock-in." FontSize="13" FontWeight="SemiBold" Foreground="#00FF9D" VerticalAlignment="Center" />
+                                        <TextBlock Text="Freedom to run, study, modify, and redistribute this software freely without vendor lock-in." FontSize="13" FontWeight="SemiBold" Foreground="#81C995" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
@@ -3026,7 +3026,7 @@
 
                 <!-- ==================== COLLAPSIBLE ACTION LOG DRAWER ==================== -->
                 <Border Grid.Row="1"
-                        Background="#09121E"
+                        Background="#CC0B111C"
                         BorderBrush="#182A3E"
                         BorderThickness="0,1,0,0">
                     <Grid>
@@ -3040,7 +3040,7 @@
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <ui:SymbolIcon Symbol="WindowConsole20" FontSize="15" Foreground="{StaticResource BrushPilgrimCyan}" Margin="0,0,8,0" />
                                 <TextBlock Text="LIVE CONSOLE STATUS:" FontSize="12.5" FontWeight="Bold" Foreground="#64748B" />
-                                <TextBlock Text="{Binding CurrentStatusText}" FontSize="12.5" Foreground="#00E5FF" Margin="8,0,0,0" TextTrimming="CharacterEllipsis" MaxWidth="500" />
+                                <TextBlock Text="{Binding CurrentStatusText}" FontSize="12.5" Foreground="#A8C7FA" Margin="8,0,0,0" TextTrimming="CharacterEllipsis" MaxWidth="500" />
                             </StackPanel>
 
                             <Button HorizontalAlignment="Right"
@@ -3061,7 +3061,7 @@
                         <!-- Slide-Up Drawer Content -->
                         <Border Grid.Row="1"
                                 Height="160"
-                                Background="#05080E"
+                                Background="#CC070B12"
                                 BorderBrush="#122030"
                                 BorderThickness="0,1,0,0"
                                 Padding="12,8"

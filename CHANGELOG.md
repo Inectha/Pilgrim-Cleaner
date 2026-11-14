@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.3] — 2026-11-14
+
+### Changed
+- **Material 3 Cobalt + Acrylic Frosted Glass UI (`App.xaml`, `MainWindow.xaml`, `DonutGaugeControl.cs`):**
+  - Replaced the legacy neon-cyan (`#00E5FF`) and bright emerald (`#00FF9D`) palette with the new **Cobalt Material 3** palette (`#0B57D0` → `#2575FC` → `#4C8DF6`, Ice Blue `#D3E3FD` / `#A8C7FA`, and muted Material Mint `#81C995` for status indicators) to match the `Pcl` brand icon.
+  - Enabled Windows 11 **Acrylic** frosted-glass backdrop (`WindowBackdropType="Acrylic"`, `Background="Transparent"`) with translucent layered surfaces for the title bar, sidebar, cards, and console drawer.
+  - Upgraded primary and secondary buttons with tactile Cobalt glass gradients, specular borders, uniform `CornerRadius="10"`, and centered press scaling (`RenderTransformOrigin="0.5,0.5"`).
+
+---
+
 ## [1.2.2] — 2026-11-14
 
 ### Added
